@@ -36,6 +36,19 @@ var API_KEY = '4b5cba233308ce9653610e67190d860a30c78771b96e6e0bdb61dca68dc94e4c'
 var SHEET_NAME = '박람회_업체';
 var NTS_URL = 'https://api.odcloud.kr/api/nts-businessman/v1/status';
 
+// ── GitHub 정합성 원장 연동 ───────────────────────────────────
+// 흐름: 클라이언트 → (여기서) 정합성 검증 → GitHub 저장소에 JSON 커밋(버전관리=원장)
+//        → 검증 통과분만 구글 시트로 반영.
+// ※ 토큰은 코드에 두지 말 것(저장소가 공개일 수 있음). Apps Script:
+//    프로젝트 설정(⚙) › 스크립트 속성 › 속성 추가 → 이름 GITHUB_TOKEN / 값 <파인그레인드 PAT>
+//    PAT 권한: 이 저장소의 Contents = Read and write 만.
+// GITHUB_BRANCH 는 커밋 대상 브랜치(저장소 기본 브랜치로 맞출 것).
+var GITHUB_OWNER  = 'Alfira0526';
+var GITHUB_REPO   = 'Sample';
+var GITHUB_BRANCH = 'claude/handoff-p0-tasks-5ep8hj';
+var GITHUB_PATH   = 'data/fair-data.json';
+var ALLOWED_TYPES = ['예식장','스드메/드메','본식스냅/DVD','예복·한복·예물','신혼여행','기타'];
+
 var HEADERS = ['최종수정','레코드ID','업체명','부스','유형','사업자번호','사업자상태','과세유형',
                '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모'];
 
@@ -60,6 +73,7 @@ function doPost(e) {
     var req = JSON.parse(e.postData.contents);
     if (req.action === 'ping')        out = ping_();
     else if (req.action === 'upsert') out = upsert_(req.rows);
+    else if (req.action === 'submit') out = apiSubmit(req.rows);
     else if (req.action === 'verify') out = verify_(req.bno);
     else if (req.action === 'stats')  out = getStats_();
     else if (req.action === 'rows')   out = getRows_();
@@ -74,6 +88,7 @@ function doPost(e) {
 /* ── google.script.run 진입점(GAS 내장 폼·보고서용) ───────── */
 function apiPing()        { return ping_(); }
 function apiUpsert(rows)  { return upsert_(rows); }
+function apiSubmit(rows)  { return submit_(rows); }
 function apiVerify(bno)   { return verify_(bno); }
 function apiStats()       { return getStats_(); }
 function apiRows()        { return getRows_(); }
@@ -241,4 +256,145 @@ function getStats_() {
   }
   stats.halls.sort(function (a, b) { return a.minSpend - b.minSpend; });
   return stats;
+}
+
+/* ══ 정합성 검증 → GitHub 원장 → 구글 시트 파이프라인 ══════════ */
+
+/**
+ * 제출 진입점. 순서:
+ *  1) 정합성 검증(validateRows_) — 통과분만 진행
+ *  2) GitHub 저장소에 검증 데이터 커밋(버전관리 원장). 토큰 설정 시 강제 게이트,
+ *     미설정 시 경고와 함께 통과(시트 저장은 유지)
+ *  3) 구글 시트로 반영(upsert_)
+ */
+function submit_(rows) {
+  var v = validateRows_(rows);
+  if (!v.valid.length) return { ok: false, error: '정합성 검증 실패 — 유효 레코드 없음', invalid: v.errors };
+  var gh;
+  try {
+    gh = publishGithub_(v.valid);
+  } catch (e) {
+    // 토큰이 설정되어 GitHub 게이트가 켜진 상태에서 커밋 실패 → 시트에 쓰지 않음(정합성 우선)
+    return { ok: false, stage: 'github', error: String(e), invalid: v.errors };
+  }
+  var up = upsert_(v.valid);
+  return { ok: true, updated: up.updated, inserted: up.inserted, invalid: v.errors, github: gh };
+}
+
+/** 스키마·규칙 검증. 반환 {valid:[...], errors:[{id,name,errors:[]}]} */
+function validateRows_(rows) {
+  var valid = [], errors = [];
+  if (!rows || !rows.length) return { valid: valid, errors: errors };
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i] || {}, errs = [];
+    var name = String(v['업체명'] || '').trim();
+    var bno = String(v['사업자번호'] || '').replace(/[^0-9]/g, '');
+    if (!name && !bno) errs.push('업체명·사업자번호 모두 없음');
+    if (bno && bno.length !== 10) errs.push('사업자번호 10자리 아님');
+    if (v['유형'] && ALLOWED_TYPES.indexOf(v['유형']) < 0) errs.push('유형 값 오류: ' + v['유형']);
+    ['대관료만원', '일인식대', '보증인원', '최소지출만원'].forEach(function (k) {
+      if (v[k] !== '' && v[k] != null && isNaN(Number(v[k]))) errs.push(k + ' 숫자 아님');
+    });
+    if (!v.id) errs.push('레코드 id 없음');
+    if (errs.length) errors.push({ id: v.id || '', name: name, errors: errs });
+    else valid.push(v);
+  }
+  return { valid: valid, errors: errors };
+}
+
+function ghToken_() {
+  try { return PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN') || ''; }
+  catch (e) { return ''; }
+}
+function ghHeaders_() {
+  return {
+    'Authorization': 'token ' + ghToken_(),
+    'Accept': 'application/vnd.github+json',
+    'User-Agent': 'wedding-fair-appscript',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+}
+function ghApiUrl_() {
+  return 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + GITHUB_PATH;
+}
+/** 현재 파일 {sha, data} 반환. 없으면 {sha:null, data:null} */
+function ghGetFile_() {
+  var res = UrlFetchApp.fetch(ghApiUrl_() + '?ref=' + encodeURIComponent(GITHUB_BRANCH),
+    { method: 'get', headers: ghHeaders_(), muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  if (code === 404) return { sha: null, data: null };
+  if (code !== 200) throw new Error('GitHub GET ' + code + ' ' + res.getContentText());
+  var body = JSON.parse(res.getContentText());
+  var data = null;
+  if (body.content) {
+    var txt = Utilities.newBlob(Utilities.base64Decode(String(body.content).replace(/\s/g, ''))).getDataAsString('UTF-8');
+    try { data = JSON.parse(txt); } catch (e) { data = null; }
+  }
+  return { sha: body.sha, data: data };
+}
+function ghPutFile_(jsonString, sha, message) {
+  var payload = { message: message, content: Utilities.base64Encode(jsonString, Utilities.Charset.UTF_8), branch: GITHUB_BRANCH };
+  if (sha) payload.sha = sha;
+  var res = UrlFetchApp.fetch(ghApiUrl_(),
+    { method: 'put', headers: ghHeaders_(), contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  if (code !== 200 && code !== 201) throw new Error('GitHub PUT ' + code + ' ' + res.getContentText());
+  var body = JSON.parse(res.getContentText());
+  return { fileSha: body.content && body.content.sha, commitSha: body.commit && body.commit.sha };
+}
+
+/** 시트 행 형태(v) → 원장 venue 레코드 */
+function rowToVenue_(v) {
+  var hall = Number(v['대관료만원']) || 0, meal = Number(v['일인식대']) || 0, guar = Number(v['보증인원']) || 0;
+  var isHall = (v['유형'] === '예식장' && meal > 0 && guar > 0);
+  return {
+    id: v.id || '', name: v['업체명'] || '', type: v['유형'] || '', biz: v['사업자번호'] || '',
+    bstt: v['사업자상태'] || '', booth: v['부스'] || '',
+    hallMinSpend: isHall ? Math.round((hall * 10000 + meal * guar) / 10000) : null,
+    updated: new Date().toISOString()
+  };
+}
+function buildBudgetFeed_(venues) {
+  var halls = venues.filter(function (x) { return x.type === '예식장' && Number(x.hallMinSpend) > 0; });
+  var s = halls.map(function (h) { return Number(h.hallMinSpend); });
+  return {
+    updated: new Date().toISOString(), count: halls.length,
+    minSpend: s.length ? Math.min.apply(null, s) : null,
+    maxSpend: s.length ? Math.max.apply(null, s) : null,
+    venues: halls.map(function (h) { return { name: h.name || '미입력', spend: Number(h.hallMinSpend) }; })
+  };
+}
+/** 검증 통과분을 원장(data/fair-data.json)에 누적 upsert 후 커밋 */
+function publishGithub_(validRows) {
+  if (!ghToken_()) return { committed: false, reason: 'GITHUB_TOKEN 미설정(스크립트 속성) — 원장 커밋 생략, 시트만 저장' };
+  var cur = ghGetFile_();
+  var dataset = (cur.data && cur.data.venues) ? cur.data
+    : { schema: 'wedding-fair/v1', updated: '', count: 0, venues: [], budgetFeed: null };
+
+  var byId = {}, byBno = {};
+  dataset.venues.forEach(function (x, idx) {
+    if (x.id) byId[x.id] = idx;
+    var b = String(x.biz || '').replace(/[^0-9]/g, '');
+    if (b.length === 10) byBno[b] = idx;
+  });
+  validRows.forEach(function (v) {
+    var ven = rowToVenue_(v);
+    var b = String(ven.biz || '').replace(/[^0-9]/g, '');
+    var idx = (ven.id && byId[ven.id] != null) ? byId[ven.id]
+      : ((b.length === 10 && byBno[b] != null) ? byBno[b] : -1);
+    if (idx >= 0) { dataset.venues[idx] = ven; }
+    else {
+      dataset.venues.push(ven);
+      var ni = dataset.venues.length - 1;
+      if (ven.id) byId[ven.id] = ni;
+      if (b.length === 10) byBno[b] = ni;
+    }
+  });
+  dataset.updated = new Date().toISOString();
+  dataset.count = dataset.venues.length;
+  dataset.budgetFeed = buildBudgetFeed_(dataset.venues);
+
+  var json = JSON.stringify(dataset, null, 2);
+  var put = ghPutFile_(json, cur.sha, 'data: fair-data.json 갱신 (' + dataset.count + '곳, 검증완료)');
+  return { committed: true, fileSha: put.fileSha, commitSha: put.commitSha, count: dataset.count };
 }

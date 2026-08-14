@@ -1,0 +1,13 @@
+{
+  "schema": "wedding-fair/v1",
+  "updated": "",
+  "count": 0,
+  "venues": [],
+  "budgetFeed": {
+    "updated": "",
+    "count": 0,
+    "minSpend": null,
+    "maxSpend": null,
+    "venues": []
+  }
+}

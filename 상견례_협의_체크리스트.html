@@ -267,9 +267,21 @@ async function load(){
   try{const v=await store.read();if(v)D=JSON.parse(v)}
   catch(e){status('저장 데이터 형식 오류 — 새로 시작')}
   render();
-  applyFeed();
-  window.addEventListener('focus',applyFeed);
-  window.addEventListener('storage',e=>{ if(!e.key||e.key==='wedding-fair-feed') applyFeed(); });
+  refreshFeed();
+  window.addEventListener('focus',refreshFeed);
+  window.addEventListener('storage',e=>{ if(!e.key||e.key==='wedding-fair-feed') refreshFeed(); });
+}
+/* 예산표 온라인 연동: GitHub 원장(정합성 검증 통과 데이터)을 raw로 읽어 반영.
+   오프라인/차단 시 localStorage 피드로 폴백. 어디서든(다른 기기 포함) 최신 견적 반영. */
+const FEED_URL='https://raw.githubusercontent.com/Alfira0526/Sample/claude/handoff-p0-tasks-5ep8hj/data/fair-data.json';
+async function refreshFeed(){
+  let feed=null, source='';
+  try{
+    const res=await fetch(FEED_URL,{cache:'no-store'});
+    if(res.ok){ const data=await res.json(); if(data&&data.budgetFeed){ feed=data.budgetFeed; source='GitHub 온라인'; } }
+  }catch(e){/* 오프라인/차단 → 로컬 폴백 */}
+  if(!feed){ try{const f=localStorage.getItem('wedding-fair-feed'); if(f){ feed=JSON.parse(f); source='이 기기 로컬'; }}catch(e){} }
+  applyFeedData(feed, source);
 }
 function save(){
   clearTimeout(t);
@@ -281,10 +293,8 @@ function save(){
 
 /* 박람회 양식이 남긴 예식장 실측 견적(wedding-fair-feed)을 읽어 예산표에 자동 반영.
    예식장 행을 실측 최소지출로 교체하고, 총지출·실질순부담을 재합산. 재실행해도 동일 결과(멱등). */
-function applyFeed(){
+function applyFeedData(feed, source){
   const tb=document.getElementById('budget'); if(!tb) return;
-  let feed=null;
-  try{const f=localStorage.getItem('wedding-fair-feed');if(f)feed=JSON.parse(f)}catch(e){}
   if(!feed || !feed.count || feed.minSpend==null) return;
   const hallRow=tb.querySelector('[data-row="hall"]'),
         totalRow=tb.querySelector('[data-row="total"]'),
@@ -311,7 +321,7 @@ function applyFeed(){
   let fn=document.getElementById('feedNote');
   if(!fn){ fn=document.createElement('p'); fn.className='lead'; fn.id='feedNote'; tb.parentNode.insertBefore(fn,tb); }
   const venues=(feed.venues||[]).map(x=>x.name+' '+won(x.spend)+'만').join(' · ');
-  fn.textContent='박람회 견적 반영됨 — 예식장 실측 최소지출 '+fmt(hall)+'만원 (업체 '+feed.count+'곳: '+venues+'). 예식장 행·총지출·실질순부담 자동 갱신(원 견적과의 차액만 반영).';
+  fn.textContent='박람회 견적 반영됨'+(source?'('+source+')':'')+' — 예식장 실측 최소지출 '+fmt(hall)+'만원 (업체 '+feed.count+'곳: '+venues+'). 예식장 행·총지출·실질순부담 자동 갱신(원 견적과의 차액만 반영).';
 }
 function render(){
   ['s0','sA','sB','sC','sD'].forEach(s=>{

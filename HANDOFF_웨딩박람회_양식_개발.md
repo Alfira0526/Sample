@@ -230,6 +230,17 @@
 - **검증**: Chromium 15종 통과(GAS 폼 감지·ping·verify·upsert 동기화, 보고서 KPI·최소지출·검증표, fetch 폴백, 미설정 안내) + 오프라인 회귀 17종 통과.
 - **미채택**: GitHub Pages 정적 호스팅(사용자가 Apps Script 통합 선택).
 
+### 2026-08-14 — GitHub 정합성 원장 + 예산표 온라인화 (사용자 결정)
+사용자 지시: 예산표도 온라인 연동. **구글 시트에서 검증하지 말고, GitHub에 API 연결해 정합성 확인된 데이터만 구글로** 넘길 것.
+- **파이프라인**: 폼 저장 → 백엔드 `submit_()` = ①정합성 검증(`validateRows_`: 업체명/사업자번호 존재, 사업자번호 10자리, 유형 화이트리스트, 숫자필드 검사, id 필수) → ②GitHub 저장소 `data/fair-data.json` 커밋(Contents API, 버전관리=원장) → ③검증 통과분만 구글 시트 upsert. **GitHub 커밋 실패 시 시트 미반영**(토큰 설정 시 게이트 강제). 토큰 미설정 시 원장만 건너뛰고 시트 저장 유지(점진 도입).
+- **보안**: GitHub 토큰은 **코드/클라이언트에 두지 않음**. Apps Script **스크립트 속성 `GITHUB_TOKEN`**(파인그레인드 PAT, 해당 저장소 Contents=Read/Write)에서만 읽음. 저장소 공개이므로 읽기는 토큰 불필요.
+- **원장 데이터(`data/fair-data.json`, 신규 시드)**: `{schema, updated, count, venues[], budgetFeed}`. `venues`는 id/사업자번호로 누적 upsert(중복 방지). `budgetFeed`(예식장 최소지출 min/max/venues)는 예산표가 소비.
+- **폼(`박람회_현장점검_양식.html`)**: `push()`가 `upsert`→`submit` 호출. `call()` 시프트에 `submit`(google.script.run `apiSubmit` / fetch `action:submit`) 추가. 상태표시줄에 GitHub 원장 반영·검증제외 건수 노출.
+- **예산표(`상견례_협의_체크리스트.html`)**: `applyFeed()`→`applyFeedData(feed,source)` + `refreshFeed()`. **GitHub raw**(`raw.githubusercontent.com/.../data/fair-data.json`)의 `budgetFeed`를 온라인으로 읽어 반영(크로스 디바이스), 실패 시 localStorage 폴백. `focus`/`storage` 시 재조회. 델타 방식·멱등 유지. 반영 근거에 출처(GitHub 온라인/이 기기 로컬) 표기.
+- **배포 추가 절차(PC)**: Apps Script 프로젝트 설정 › **스크립트 속성** 에 `GITHUB_TOKEN` 저장. `.gs` 상단 `GITHUB_OWNER/REPO/BRANCH/PATH` 확인(브랜치는 저장소 기본 브랜치로). `분석보고서.html`·예산표의 `FEED_URL` 브랜치도 기본 브랜치 병합 시 함께 갱신.
+- **검증**: 서버 파이프라인 19종(검증 필터·GitHub 커밋 라운드트립·누적 upsert·budgetFeed·토큰 미설정 graceful·전량 무효 거부) + 예산표 온라인 8종(GitHub raw 반영·로컬 폴백·무데이터 정적유지·멱등) + 폼/보고서 15종 + 오프라인 회귀 17종, 모두 통과.
+- **주의(브랜치)**: 현재 `FEED_URL`·`GITHUB_BRANCH`가 작업 브랜치 `claude/handoff-p0-tasks-5ep8hj`. 기본 브랜치로 병합 후에는 두 값을 갱신해야 raw/커밋 경로가 맞음.
+
 ---
 *작성일 2026-08-14 · 근거: 한국소비자원 참가격(2025.4·2026.8), 공정거래위원회 표준약관·피해예방주의보(2026.4.22), 공공데이터포털 국세청 사업자등록정보 조회 서비스 상세, 사용자 확정 입력*
 *미확인 항목: §11 전체 5건*

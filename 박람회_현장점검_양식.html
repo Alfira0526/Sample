@@ -485,6 +485,7 @@ function call(action,payload){
         .withFailureHandler(e=>reject(new Error((e&&e.message)||'서버 오류')));
       if(action==='ping')        run.apiPing();
       else if(action==='upsert') run.apiUpsert(payload.rows);
+      else if(action==='submit') run.apiSubmit(payload.rows);
       else if(action==='verify') run.apiVerify(payload.bno);
       else if(action==='stats')  run.apiStats();
       else if(action==='rows')   run.apiRows();
@@ -518,15 +519,19 @@ async function push(){
   const idx = D.v.map((v,i)=>i).filter(i=>!D.v[i].synced && (D.v[i].name||D.v[i].biz));
   if(!idx.length){ clearRetry(); return; }
   try{
-    const r = await call('upsert',{rows:idx.map(i=>flat(D.v[i]))});
+    // submit = 정합성 검증 → GitHub 원장 커밋 → 구글 시트 반영(백엔드에서 순차 처리)
+    const r = await call('submit',{rows:idx.map(i=>flat(D.v[i]))});
     if(r && r.ok){
       idx.forEach(markSynced);
       clearRetry();
-      status('시트 저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
+      const gh=(r.github&&r.github.committed)?' · GitHub 원장 반영':'';
+      const inv=(r.invalid&&r.invalid.length)?' · 검증제외 '+r.invalid.length+'건':'';
+      status('저장 완료'+gh+inv+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
       persist();
     } else {
       scheduleRetry();
-      status('시트 응답 오류 — 대기열 유지 · '+Math.round(retryDelay/1000)+'초 후 재시도');
+      const why=(r&&r.stage==='github')?'GitHub 커밋 실패':'시트 응답 오류';
+      status(why+' — 대기열 유지 · '+Math.round(retryDelay/1000)+'초 후 재시도');
     }
   }catch(e){
     scheduleRetry();
