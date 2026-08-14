@@ -39,6 +39,20 @@ body{
 @keyframes p{0%,100%{opacity:1}50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.band span.dot{animation:none}}
 
+/* 저장 실패 경고 — 데이터 유실 위험을 조용히 넘기지 않고 상단에 상시 노출 */
+.alert{
+  background:#fbf1f0;color:var(--seal);
+  border:1px solid var(--seal);border-left:4px solid var(--seal);
+  margin:12px 0 0;padding:11px 13px;
+  font-size:13px;font-weight:700;line-height:1.5;
+}
+.alert::before{content:"⚠ 저장 경고 — ";font-weight:800;letter-spacing:.02em}
+.alert .fix{
+  display:inline-block;margin-top:7px;padding:6px 12px;
+  border:1px solid var(--seal);background:var(--seal);color:#fff;
+  font-size:12px;font-weight:700;border-radius:2px;cursor:pointer;
+}
+
 header.masthead{padding:18px 0 12px;border-bottom:2px solid var(--ink)}
 .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
 h1{margin:6px 0 4px;font-size:25px;line-height:1.15;letter-spacing:-.03em;font-weight:800}
@@ -159,6 +173,8 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 <div class="band"><span class="dot"></span>오늘은 계약·서명·계약금 결제를 하지 않는다. 견적서만 받는다.</div>
 
 <div class="wrap">
+
+<div class="alert" id="saveAlert" role="alert" aria-live="assertive" hidden></div>
 
 <header class="masthead">
   <div class="eyebrow">현장 점검 양식 · M1 시장조사</div>
@@ -310,11 +326,61 @@ const cards = $('#cards');
 let t=null;
 function status(m){$('#status').textContent=m}
 
+/* ── 저장 어댑터 ─────────────────────────────────────────────
+   기본 저장소: localStorage. Claude 아티팩트(window.storage)가 있으면
+   양쪽에 함께 기록해 미리보기·일반 브라우저 어디서든 데이터가 유지됨.
+   일반 브라우저에는 window.storage 가 없으므로 더 이상 그것에 의존하지 않음.
+   읽기: localStorage 우선, 없으면 아티팩트 저장소 값으로 폴백(기존 사용자 이전).
+   저장 규모: 박람회 1일 부스 수십 개 × 레코드 → 수십 KB 수준으로 localStorage
+   5MB 한계와 무관. 초과 시(QuotaExceededError) 조용히 넘기지 않고 상단 경고로 노출.
+   이 어댑터만 교체하면 IndexedDB 등으로 확장 가능(현 규모에선 불필요). */
+const STORE_KEY = 'fair-2026-08-15';
+const hasArtifactStore = !!(window.storage
+  && typeof window.storage.get === 'function'
+  && typeof window.storage.set === 'function');
+const store = {
+  async read(){
+    let local=null, artifact=null, blocked=false;
+    try{ local = localStorage.getItem(STORE_KEY); }
+    catch(e){ blocked=true; }               // 시크릿 모드 등 접근 차단
+    if(hasArtifactStore){
+      try{ const r = await window.storage.get(STORE_KEY); artifact = (r && r.value!=null) ? r.value : null; }
+      catch(e){ /* 아티팩트 저장소 읽기 실패는 치명적 아님 */ }
+    }
+    return { value:(local!=null ? local : artifact), blocked };
+  },
+  async write(value){
+    const res = { local:false, artifact:false, quota:false };
+    try{ localStorage.setItem(STORE_KEY, value); res.local=true; }
+    catch(e){ if(e && (e.name==='QuotaExceededError' || e.code===22 || e.code===1014)) res.quota=true; }
+    if(hasArtifactStore){
+      try{ await window.storage.set(STORE_KEY, value); res.artifact=true; }
+      catch(e){ /* 아래에서 res.ok 로 종합 판단 */ }
+    }
+    res.ok = res.local || res.artifact;      // 한 곳이라도 성공하면 유실 아님
+    return res;
+  }
+};
+function showSaveAlert(msg){
+  const el=$('#saveAlert'); if(!el) return;
+  el.innerHTML='';
+  el.appendChild(document.createTextNode(msg+' '));
+  const b=document.createElement('button');
+  b.className='fix'; b.type='button'; b.textContent='기록 내보내기';
+  b.onclick=()=>$('#export').click();
+  el.appendChild(b);
+  el.hidden=false;
+}
+function hideSaveAlert(){ const el=$('#saveAlert'); if(el && !el.hidden){ el.hidden=true; el.textContent=''; } }
+
 async function load(){
-  try{
-    const r = await window.storage.get('fair-2026-08-15');
-    if(r && r.value) D = JSON.parse(r.value);
-  }catch(e){ status('저장소 미연결 — 이 화면에서만 유지'); }
+  const r = await store.read();
+  if(r.blocked){
+    showSaveAlert('이 브라우저에서 저장이 차단됨 — 입력이 이 화면에서만 유지되고 새로고침 시 사라집니다. 개인정보 보호(시크릿) 모드 여부를 확인하고, 중요한 내용은 지금 복사해 두세요.');
+    status('저장 차단 — 이 화면에서만 유지');
+  }
+  try{ if(r.value) D = JSON.parse(r.value); }
+  catch(e){ status('저장된 데이터 형식 오류 — 새로 시작'); }
   if(!D.v || !D.v.length) D.v=[blank()];
   if(!D.chk) D.chk={};
   D.v.forEach(v=>{ if(!v.id) v.id=uid(); if(v.synced===undefined) v.synced=false; });
@@ -367,8 +433,16 @@ async function push(){
   }catch(e){ status('오프라인 — 기기 저장만 (대기 '+idx.length+'건)'); }
 }
 async function persist(){
-  try{ await window.storage.set('fair-2026-08-15', JSON.stringify(D)); }
-  catch(e){ status('기기 저장 실패 — 내보내기로 복사할 것'); }
+  const res = await store.write(JSON.stringify(D));
+  if(res.ok){ hideSaveAlert(); return res; }
+  if(res.quota){
+    showSaveAlert('기기 저장공간이 가득 찼습니다 — 새 입력이 저장되지 않습니다. 오래된 업체 카드를 삭제하거나 지금 기록을 복사해 두세요.');
+    status('저장 실패(용량 초과) — 내보내기 필요');
+  }else{
+    showSaveAlert('기기 저장 실패 — 저장이 차단되어 새로고침 시 입력이 사라질 수 있습니다. 지금 기록을 복사해 두세요.');
+    status('기기 저장 실패 — 내보내기로 복사할 것');
+  }
+  return res;
 }
 function save(){
   clearTimeout(t);
