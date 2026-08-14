@@ -698,7 +698,7 @@ function renderPhotos(i){
   if(el) el.innerHTML=photoHTML(D.v[i],i);
 }
 function addPhoto(i,file){
-  if(!file || !/^image\//.test(file.type)) return;
+  if(!file || String(file.type).indexOf('image/')!==0) return;
   const rd=new FileReader();
   rd.onload=()=>{
     const img=new Image();

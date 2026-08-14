@@ -63,17 +63,30 @@ var HEADERS = ['최종수정','레코드ID','업체명','부스','유형','사�
    ※ 브랜치를 기본 브랜치로 병합하면 RAW_BASE 브랜치명도 갱신할 것. */
 var RAW_BASE = 'https://raw.githubusercontent.com/Alfira0526/Sample/claude/handoff-p0-tasks-5ep8hj/';
 
+/* GitHub Contents API로 파일 텍스트를 가져옴 — raw CDN(최대 5분 지연)과 달리 최신 커밋 즉시 반영.
+   토큰이 있으면 인증(5000/시), 없으면 비인증(60/시). 실패 시 raw로 폴백. */
+function ghFetchText_(fileName) {
+  var apiUrl = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/'
+             + encodeURIComponent(fileName) + '?ref=' + encodeURIComponent(GITHUB_BRANCH);
+  var res = UrlFetchApp.fetch(apiUrl, { method: 'get', headers: ghHeaders_(), muteHttpExceptions: true });
+  if (res.getResponseCode() === 200) {
+    var body = JSON.parse(res.getContentText());
+    return Utilities.newBlob(Utilities.base64Decode(String(body.content).replace(/\s/g, ''))).getDataAsString('UTF-8');
+  }
+  // 폴백: raw (CDN 지연 가능)
+  var r2 = UrlFetchApp.fetch(RAW_BASE + encodeURIComponent(fileName), { muteHttpExceptions: true });
+  if (r2.getResponseCode() !== 200) throw new Error('GitHub ' + res.getResponseCode() + '/' + r2.getResponseCode());
+  return r2.getContentText();
+}
 function serveHtml_(fileName, title, bust) {
   var out;
   try {
     var cache = CacheService.getScriptCache();
-    var key = 'html:' + fileName;
+    var key = 'html2:' + fileName;
     var html = bust ? null : cache.get(key);
     if (!html) {
-      var res = UrlFetchApp.fetch(RAW_BASE + encodeURIComponent(fileName), { muteHttpExceptions: true });
-      if (res.getResponseCode() !== 200) throw new Error('GitHub HTTP ' + res.getResponseCode());
-      html = res.getContentText();
-      try { cache.put(key, html, 30); } catch (ce) { /* 100KB 초과 등 → 캐시 없이 서빙 */ }
+      html = ghFetchText_(fileName);
+      try { cache.put(key, html, 15); } catch (ce) { /* 100KB 초과 등 → 캐시 없이 서빙 */ }
     }
     out = HtmlService.createHtmlOutput(html);
   } catch (err) {
