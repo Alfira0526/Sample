@@ -313,7 +313,7 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 window.addEventListener('error', function(ev){
   try{
     var s=document.getElementById('status');
-    if(s){ s.textContent='⚠ JS오류: '+((ev&&ev.message)||'unknown')+' @L'+((ev&&ev.lineno)||'?'); s.style.color='#ffb3ab'; }
+    if(s){ s.textContent='⚠ '+((ev&&ev.message)||'unknown')+' @L'+((ev&&ev.lineno)||'?')+':C'+((ev&&ev.colno)||'?'); s.style.color='#ffb3ab'; }
   }catch(e){}
 });
 </script>
@@ -775,7 +775,7 @@ function buildTSV(){
   const head=['최종수정','레코드ID','업체명','부스','유형','사업자번호','사업자상태','과세유형',
     '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모'];
   const now=new Date().toLocaleString('ko-KR');
-  const clean=s=>String(s==null?'':s).replace(/[\t\n\r]/g,' ');
+  const clean=s=>String(s==null?'':s).split('\t').join(' ').split('\n').join(' ').split('\r').join(' ');
   const lines=[head.join('\t')];
   D.v.filter(v=>v.name||v.biz).forEach(v=>{
     const f=flat(v);
@@ -794,7 +794,7 @@ $('#fmtBtn').onclick=()=>{
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-verify]'); if(!b) return;
   const i=+b.dataset.verify, v=D.v[i], el=document.getElementById('vres'+i);
-  const bno=(v.biz||'').replace(/[^0-9]/g,'');
+  const bno=(v.biz||'').split('').filter(function(ch){return ch>='0'&&ch<='9';}).join('');
   el.style.display='block';
   if(bno.length!==10){el.className='vres bad';el.textContent='사업자번호 10자리를 입력할 것';return}
   if(!isGAS() && !D.ep){el.className='vres bad';el.textContent='연동 설정에서 웹 앱 URL을 먼저 입력할 것';return}
@@ -855,7 +855,7 @@ $('#export').onclick=()=>{
 
 /* 견적 비교 — 예식장을 동일 보증인원(N)으로 정규화해 최소지출 오름차순 비교.
    적용인원 = max(N, 업체 최소보증). 최소보증이 N보다 크면 강제 상향(N명으로 못 내림)임을 표시. */
-function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function esc(s){ s=String(s==null?'':s); return s.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;'); }
 function renderCompare(){
   const N=+$('#cmpN').value||130;
   const halls=D.v.filter(v=>v.type==='예식장' && (+v.meal>0) && (+v.guar>0));
