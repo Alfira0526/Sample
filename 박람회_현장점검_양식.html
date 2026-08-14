@@ -308,15 +308,16 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 </dialog>
 
 <script>
-/* 진단용 전역 오류 표시기 — JS가 어디서 죽는지 화면(상태표시줄)에 노출. 원인 파악 후 제거. */
+/* 진단용 오류 표시기 — 별도 스크립트 블록. 아래 메인 스크립트가 파싱 오류여도
+   이 핸들러는 먼저 등록되므로, 오류 메시지·줄번호를 상태표시줄에 띄울 수 있음. 원인 파악 후 제거. */
 window.addEventListener('error', function(ev){
   try{
     var s=document.getElementById('status');
-    if(s) s.textContent='⚠ JS오류: '+((ev&&ev.message)||(ev&&ev.error)||'unknown')+' @L'+((ev&&ev.lineno)||'?');
-    s && (s.style.color='#ffb3ab');
+    if(s){ s.textContent='⚠ JS오류: '+((ev&&ev.message)||'unknown')+' @L'+((ev&&ev.lineno)||'?'); s.style.color='#ffb3ab'; }
   }catch(e){}
 });
-window.__jsAlive='script-top';
+</script>
+<script>
 const COMMON = [
   ["c1","견적서를 서면으로 주실 수 있습니까? 유효기간이 며칠입니까?","전 항목 명시 요구 · 위험: 구두로만 안내"],
   ["c2","이 금액에 부가세가 포함된 금액입니까?","VAT 별도면 총액 10% 상승 · 위험: \"보통 별도예요\""],
