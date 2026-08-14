@@ -91,6 +91,7 @@ table.cmp th{background:#f7f4ee;font-weight:800;color:var(--ink-2);text-align:ri
 table.cmp td.nm,table.cmp th.nm{text-align:left;white-space:normal;min-width:90px}
 table.cmp tr.best td{background:#f1f7f3}
 table.cmp tr.best td.rk{color:var(--ok);font-weight:800}
+table.cmp tr.brk td{background:#efece5;font-weight:800;text-align:left;color:var(--ink)}
 table.cmp .forced{color:var(--seal);font-weight:700}
 .cmpnote{font-size:11.5px;color:var(--ink-2);margin:10px 2px 0;line-height:1.5}
 
@@ -855,6 +856,18 @@ function renderCompare(){
   const trs2=rows.map(r=>`<tr>
     <td class="nm">${esc(r.name)}</td>${TIERS.map(t=>tierCell(r,t)).join('')}
   </tr>`).join('');
+  // 인당 단가(원/인) — 업체마다 보증 단위가 달라 총액 비교가 어려움 → 보증 구간별로 나눠 인당 단가로 비교
+  // 인당 단가 = 1인식대 + 대관료(원)/보증인원 · 각 값은 업체 최소보증 기준
+  const BRACKETS=[['150명 미만',g=>g<150],['150명 이상 ~ 200명 미만',g=>g>=150&&g<200],['200명 이상',g=>g>=200]];
+  const perHead=r=>Math.round((+r.m||0)+(+r.h||0)*10000/(+r.g||1));
+  const ownCost=r=>((+r.h||0)*10000+(+r.m||0)*(+r.g||0))/10000;
+  const trs3=BRACKETS.map(([label,test])=>{
+    const list=rows.filter(r=>test(+r.g)).map(r=>({r,ph:perHead(r)})).sort((a,b)=>a.ph-b.ph);
+    const body=list.length
+      ? list.map(({r,ph})=>`<tr><td class="nm">${esc(r.name)}${r.risk?` <span class="forced">⚠${r.risk}</span>`:''}</td><td>${r.g}</td><td><b>${won(ph)}</b></td><td>${won(ownCost(r))}</td></tr>`).join('')
+      : `<tr><td class="nm" colspan="4" style="text-align:left;color:var(--ink-2)">해당 구간 업체 없음</td></tr>`;
+    return `<tr class="brk"><td colspan="4">${label} · ${list.length}곳</td></tr>${body}`;
+  }).join('');
   body.innerHTML=`<div class="cmpwrap"><table class="cmp">
     <thead><tr><th>순위</th><th class="nm">업체</th><th>대관(만)</th><th>1인식대(원)</th><th>최소보증</th><th>적용인원</th><th>${N}명 지출(만원)</th></tr></thead>
     <tbody>${trs}</tbody></table></div>
@@ -867,6 +880,13 @@ function renderCompare(){
         <thead><tr><th class="nm">업체</th><th>120명</th><th>150명</th><th>200명</th></tr></thead>
         <tbody>${trs2}</tbody></table></div>
       <div class="cmpnote">각 구간 = 대관료 + 1인식대 × max(구간, 업체 최소보증). <span class="forced">↑</span> = 최소보증이 그 구간보다 커서 못 내림(강제 상향).</div>
+    </div>
+    <div class="cmp2">
+      <h4>인당 단가 — 보증 구간별 (원/인)</h4>
+      <div class="cmpwrap"><table class="cmp">
+        <thead><tr><th class="nm">업체</th><th>최소보증</th><th>인당 단가(원)</th><th>총액(만원)</th></tr></thead>
+        <tbody>${trs3}</tbody></table></div>
+      <div class="cmpnote">업체마다 보증 단위가 달라 총액 직접 비교가 어려움 → <b>인당 단가 = 1인식대 + 대관료÷보증인원</b> 으로 정규화(값은 업체 최소보증 기준). 구간 안에서 오름차순. 부가세·꽃·주류·봉사료 별도.</div>
     </div>`;
 }
 $('#compare').onclick=()=>{ renderCompare(); $('#cmpDlg').showModal(); };
