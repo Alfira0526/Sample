@@ -66,9 +66,24 @@ textarea.qa{margin-top:6px;min-height:34px;padding:7px 8px;font-size:15px;line-h
   color:var(--seal);font-weight:700;font-size:12.5px;border-radius:2px;cursor:pointer}
 .delcard:active{background:#fbf1f0}
 
+/* 견적서 사진 첨부 */
+.photos{margin-top:14px;border:1px solid var(--rule);background:#fbfaf7;padding:10px}
+.phhead{font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.03em;margin-bottom:8px}
+.phhead span{color:var(--seal)}
+.phrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.thumb{position:relative;width:72px;height:72px;flex:none;border:1px solid var(--rule);background:#fff}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:-8px;right:-8px;width:22px;height:22px;padding:0;border-radius:50%;
+  border:1px solid #fff;background:var(--seal);color:#fff;font-size:13px;line-height:1;cursor:pointer}
+.phadd{width:72px;height:72px;flex:none;border:1px dashed var(--rule);background:#fff;color:var(--ink-2);
+  display:grid;place-items:center;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
+.phnote{font-size:10.5px;color:var(--ink-2);margin-top:8px;line-height:1.4}
+
 /* 견적 비교 */
 .cmpbtn{width:100%;padding:12px;border:1px solid var(--ink);background:transparent;color:var(--ink);
   font-weight:700;font-size:13.5px;border-radius:2px;cursor:pointer;margin-bottom:12px}
+.cmp2{margin-top:16px}
+.cmp2 h4{font-size:12px;font-weight:800;color:var(--ink-2);margin:0 0 7px}
 .cmpwrap{overflow-x:auto}
 table.cmp{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
 table.cmp th,table.cmp td{border:1px solid var(--rule);padding:6px 8px;text-align:right;white-space:nowrap}
@@ -422,7 +437,7 @@ async function load(){
   catch(e){ status('저장된 데이터 형식 오류 — 새로 시작'); }
   if(!D.v || !D.v.length) D.v=[blank()];
   if(!D.chk) D.chk={};
-  D.v.forEach(v=>{ if(!v.id) v.id=uid(); if(v.synced===undefined) v.synced=false; });
+  D.v.forEach(v=>{ if(!v.id) v.id=uid(); if(v.synced===undefined) v.synced=false; if(!Array.isArray(v.photos)) v.photos=[]; });
   if(D.ep){ $('#endpoint').value=D.ep; linkBadge(true); }
   render();
   restoreChk();
@@ -487,8 +502,22 @@ async function push(){
     status('오프라인 — 기기 저장만 (대기 '+idx.length+'건 · '+Math.round(retryDelay/1000)+'초 후 재시도)');
   }
 }
+/* 상견례 체크리스트 연동용 공유 피드 — 예식장 실측 최소지출을 localStorage에 요약 기록.
+   상견례 예산표(동일 브라우저)가 이 값을 읽어 예식장 행·총지출을 자동 반영. */
+function writeFeed(){
+  try{
+    const halls=D.v.filter(v=>v.type==='예식장' && +v.meal>0 && +v.guar>0)
+      .map(v=>({name:v.name||'미입력', spend:Math.round((+v.hall*10000 + +v.meal*+v.guar)/10000)}));
+    const s=halls.map(h=>h.spend);
+    localStorage.setItem('wedding-fair-feed', JSON.stringify({
+      updated:new Date().toISOString(), count:halls.length,
+      minSpend:s.length?Math.min(...s):null, maxSpend:s.length?Math.max(...s):null, venues:halls
+    }));
+  }catch(e){/* 피드 기록 실패는 본 저장에 영향 없음 */}
+}
 async function persist(){
   const res = await store.write(JSON.stringify(D));
+  if(res.local) writeFeed();
   if(res.ok){ hideSaveAlert(); return res; }
   if(res.quota){
     showSaveAlert('기기 저장공간이 가득 찼습니다 — 새 입력이 저장되지 않습니다. 오래된 업체 카드를 삭제하거나 지금 기록을 복사해 두세요.');
@@ -516,7 +545,7 @@ window.addEventListener('beforeunload',e=>{
   if(pendingSave || saveBlocked){ e.preventDefault(); e.returnValue=''; }
 });
 function uid(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function blank(){return{id:uid(),name:'',booth:'',type:'예식장',biz:'',bstt:'',btax:'',hall:'',meal:'',guar:'120',memo:'',q:{},f:{},synced:false}}
+function blank(){return{id:uid(),name:'',booth:'',type:'예식장',biz:'',bstt:'',btax:'',hall:'',meal:'',guar:'120',memo:'',q:{},f:{},photos:[],synced:false}}
 function qBlock(v,i,list,title){
   if(!list.length) return '';
   return `<div style="margin-top:14px"><div style="font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.05em;margin-bottom:4px">${title}</div>`+
@@ -564,6 +593,7 @@ function render(){
           ${FLAGS.map(([k,txt])=>`<div class="q"><input type="checkbox" data-v="${i}" data-fl="${k}" ${v.f[k]?'checked':''}><div class="qt">${txt}</div></div>`).join('')}
         </div>
         <label class="f" style="margin-top:13px"><i>메모</i><textarea data-v="${i}" data-f="memo" placeholder="상담자 이름, 분위기, 특이사항">${v.memo}</textarea></label>
+        <div class="photos" data-pw="${i}">${photoHTML(v,i)}</div>
         <button class="delcard" type="button" data-del="${i}">이 업체 카드 삭제</button>
       </div>
     </details>`;
@@ -572,6 +602,41 @@ function render(){
   document.querySelectorAll('textarea.qa').forEach(autoGrow);
 }
 function autoGrow(el){ el.style.height='auto'; el.style.height=(el.scrollHeight)+'px'; }
+/* 견적서 사진 — 클라이언트에서 리사이즈·JPEG 압축 후 base64로 로컬 저장(시트 미전송). */
+function photoHTML(v,i){
+  const ph=v.photos||[];
+  return `<div class="phhead">견적서 사진 <span>${ph.length?ph.length+'장':'없음'}</span></div>
+    <div class="phrow">
+      ${ph.map((p,pi)=>`<div class="thumb"><img src="${p}" alt="견적서 ${pi+1}"><button type="button" data-delph="${i}:${pi}" aria-label="사진 삭제">×</button></div>`).join('')}
+      <label class="phadd">＋ 사진<input type="file" accept="image/*" data-ph="${i}" hidden></label>
+    </div>
+    <div class="phnote">이 기기에만 저장 · 큰 사진은 자동 축소(~긴변 1200px). 분쟁 대비 견적서 원본을 촬영해 두세요.</div>`;
+}
+function renderPhotos(i){
+  const el=document.querySelector('.photos[data-pw="'+i+'"]');
+  if(el) el.innerHTML=photoHTML(D.v[i],i);
+}
+function addPhoto(i,file){
+  if(!file || !/^image\//.test(file.type)) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1200; let w=img.width, h=img.height;
+      if(w>max||h>max){ const s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      let durl; try{ durl=c.toDataURL('image/jpeg',0.6); }catch(e){ status('사진 처리 실패'); return; }
+      (D.v[i].photos=D.v[i].photos||[]).push(durl);
+      renderPhotos(i); markUnsynced(i); save();
+      status('사진 추가됨 · '+Math.round(durl.length/1024)+'KB');
+    };
+    img.onerror=()=>status('이미지를 열 수 없음');
+    img.src=rd.result;
+  };
+  rd.onerror=()=>status('사진 읽기 실패');
+  rd.readAsDataURL(file);
+}
 function updateRisk(i){
   const el=document.getElementById('rk'+i); if(!el) return;
   const n=FLAGS.filter(([k])=>D.v[i].f[k]).length;
@@ -619,8 +684,19 @@ document.addEventListener('input',e=>{
 function addV(){D.v.push(blank());render();save();window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
 $('#add').onclick=addV; $('#addb').onclick=addV;
 document.addEventListener('click',e=>{
-  const b=e.target.closest('[data-del]'); if(!b) return;
-  delV(+b.dataset.del);
+  const del=e.target.closest('[data-del]');
+  if(del){ delV(+del.dataset.del); return; }
+  const dph=e.target.closest('[data-delph]');
+  if(dph){
+    const [i,pi]=dph.dataset.delph.split(':').map(Number);
+    if(D.v[i]&&D.v[i].photos){ D.v[i].photos.splice(pi,1); renderPhotos(i); markUnsynced(i); save(); }
+  }
+});
+document.addEventListener('change',e=>{
+  const inp=e.target.closest('[data-ph]'); if(!inp||!inp.files||!inp.files.length) return;
+  const i=+inp.dataset.ph;
+  Array.from(inp.files).forEach(f=>addPhoto(i,f));
+  inp.value='';
 });
 
 /* 사업자등록번호 상태조회 (국세청 사업자등록정보 진위확인·상태조회 API를 Apps Script가 중계) */
@@ -694,6 +770,7 @@ $('#export').onclick=()=>{
     });
     const fl=FLAGS.filter(([k])=>v.f[k]).map(([,t])=>t);
     if(fl.length) L.push('  ⚠ 위험신호: '+fl.join(' / '));
+    if(v.photos&&v.photos.length) L.push('  견적서 사진: '+v.photos.length+'장 (앱 내 보관)');
     if(v.memo) L.push('  메모: '+v.memo);
   });
   L.push('','— 귀가 후 검증 —');
@@ -731,12 +808,26 @@ function renderCompare(){
     <td class="${r.forced?'forced':''}">${r.eff}${r.forced?'↑':''}</td>
     <td><b>${won(r.cost)}</b></td>
   </tr>`).join('');
+  // 보증 120/150/200 구간별 총액 — 대관료·1인식대로 자동 계산(추가 입력·시트 변경 없음)
+  const TIERS=[120,150,200];
+  const tierCell=(r,t)=>{ const eff=Math.max(t,r.g); const cost=(r.h*10000+r.m*eff)/10000; const f=r.g>t;
+    return `<td class="${f?'forced':''}">${won(cost)}${f?'↑':''}</td>`; };
+  const trs2=rows.map(r=>`<tr>
+    <td class="nm">${esc(r.name)}</td>${TIERS.map(t=>tierCell(r,t)).join('')}
+  </tr>`).join('');
   body.innerHTML=`<div class="cmpwrap"><table class="cmp">
     <thead><tr><th>순위</th><th class="nm">업체</th><th>대관(만)</th><th>1인식대(원)</th><th>최소보증</th><th>적용인원</th><th>${N}명 지출(만원)</th></tr></thead>
     <tbody>${trs}</tbody></table></div>
     <div class="cmpnote">· 지출 = 대관료 + 1인식대 × <b>max(${N}, 업체 최소보증)</b>. 부가세·꽃장식·주류·봉사료 별도 여부는 별도 확인.<br>
     · <b>적용인원 ↑</b> = 해당 업체 최소보증이 ${N}명을 초과해 ${N}명으로 내릴 수 없음(강제 상향).<br>
-    · <span class="forced">⚠숫자</span> = 위험신호 체크 수. 최저가라도 위험신호가 많으면 순위 재검토.</div>`;
+    · <span class="forced">⚠숫자</span> = 위험신호 체크 수. 최저가라도 위험신호가 많으면 순위 재검토.</div>
+    <div class="cmp2">
+      <h4>보증 구간별 총액 (120 / 150 / 200명 · 만원)</h4>
+      <div class="cmpwrap"><table class="cmp">
+        <thead><tr><th class="nm">업체</th><th>120명</th><th>150명</th><th>200명</th></tr></thead>
+        <tbody>${trs2}</tbody></table></div>
+      <div class="cmpnote">각 구간 = 대관료 + 1인식대 × max(구간, 업체 최소보증). <span class="forced">↑</span> = 최소보증이 그 구간보다 커서 못 내림(강제 상향).</div>
+    </div>`;
 }
 $('#compare').onclick=()=>{ renderCompare(); $('#cmpDlg').showModal(); };
 $('#cmpN').onchange=renderCompare;

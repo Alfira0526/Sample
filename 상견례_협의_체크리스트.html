@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>상견례 협의 체크리스트 — 2026.09</title>
+<style>
+:root{
+  --ink:#12161c;--ink-2:#39424f;--paper:#eeeae2;--card:#fff;--rule:#c9c2b6;
+  --seal:#8c2f26;--amber:#a86a12;--ok:#2c5c46;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  font-size:15px;line-height:1.55;padding-bottom:120px;
+}
+.wrap{max-width:720px;margin:0 auto;padding:0 14px}
+.band{
+  position:sticky;top:0;z-index:50;background:var(--seal);color:#fff;
+  padding:9px 14px;font-size:13px;font-weight:700;letter-spacing:-.02em;
+  display:flex;align-items:center;gap:9px;box-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.band .cnt{
+  margin-left:auto;flex:none;background:#fff;color:var(--seal);
+  padding:1px 8px;font-variant-numeric:tabular-nums;font-size:12px;border-radius:2px;
+}
+header.masthead{padding:18px 0 12px;border-bottom:2px solid var(--ink)}
+.eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
+h1{margin:6px 0 4px;font-size:25px;line-height:1.15;letter-spacing:-.03em;font-weight:800}
+.sub{font-size:12.5px;color:var(--ink-2)}
+h2{font-size:13px;letter-spacing:.02em;margin:26px 0 4px;padding-bottom:5px;border-bottom:1px solid var(--ink);font-weight:800;display:flex;align-items:baseline;gap:8px}
+h2 small{font-weight:500;color:var(--ink-2);font-size:11.5px;letter-spacing:0;margin-left:auto}
+.lead{font-size:12.5px;color:var(--ink-2);margin:0 0 10px;line-height:1.5}
+
+.item{background:var(--card);border:1px solid var(--rule);margin-bottom:10px}
+.item.done{border-color:var(--ok);background:#f4f8f5}
+.item>summary{list-style:none;cursor:pointer;padding:12px 13px;display:flex;gap:10px;align-items:flex-start;font-size:14.5px;font-weight:700;line-height:1.4}
+.item>summary::-webkit-details-marker{display:none}
+.pri{flex:none;font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 6px;margin-top:1px;border-radius:2px;color:#fff;background:var(--ink-2)}
+.pri.A{background:var(--seal)}.pri.B{background:var(--amber)}.pri.C{background:var(--ink-2)}.pri.O{background:var(--ok)}
+.item[open]>summary{border-bottom:1px solid var(--rule);background:#f7f4ee}
+.item.done[open]>summary{background:#eaf1ec}
+.st{margin-left:auto;flex:none;font-size:11px;font-weight:700;color:var(--ink-2)}
+.item.done .st{color:var(--ok)}
+.body{padding:13px}
+.why{font-size:12.5px;color:var(--ink-2);line-height:1.5;padding:9px 10px;background:#f7f4ee;border-left:2px solid var(--rule);margin-bottom:12px}
+.why b{color:var(--ink)}
+label.f{display:block;margin-bottom:11px}
+label.f>i{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:4px}
+input[type=text],textarea,select{
+  width:100%;padding:11px 10px;font-size:16px;font-family:inherit;color:var(--ink);
+  background:#fbfaf7;border:1px solid var(--rule);border-radius:2px;
+}
+textarea{min-height:58px;resize:vertical;line-height:1.5}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px;background:#fff}
+.opts{margin-bottom:12px}
+.opts label{
+  display:flex;gap:9px;align-items:flex-start;padding:10px;border:1px solid var(--rule);
+  background:#fbfaf7;margin-bottom:6px;font-size:13.5px;line-height:1.45;cursor:pointer;
+}
+.opts label:has(input:checked){border-color:var(--ink);background:#fff;box-shadow:inset 0 0 0 1px var(--ink)}
+.opts input{width:20px;height:20px;flex:none;margin:0;accent-color:var(--ink)}
+.opts label em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.settle{display:flex;gap:9px;align-items:center;padding:10px;border:1px dashed var(--rule);background:#fbfaf7}
+.settle input{width:22px;height:22px;accent-color:var(--ok);flex:none}
+.settle span{font-size:13px;font-weight:700}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--card);border:1px solid var(--rule)}
+th,td{padding:8px 9px;text-align:left;border-bottom:1px solid var(--rule)}
+th{background:#f7f4ee;font-size:11px;letter-spacing:.03em;font-weight:800;color:var(--ink-2)}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+tr.tot td{font-weight:800;background:#f7f4ee}
+.feedbadge{display:inline-block;font-size:9px;font-weight:800;padding:1px 4px;border-radius:2px;background:var(--ok);color:#fff;vertical-align:1px;margin-left:3px}
+#feedNote{border-left:2px solid var(--ok);padding:9px 10px;background:#f1f7f3;color:var(--ok);font-weight:700}
+
+ul.rules{list-style:none;padding:0;margin:0;border-top:1px solid var(--ink)}
+ul.rules li{padding:11px 2px;border-bottom:1px solid var(--rule);font-size:13.5px;line-height:1.45;display:flex;gap:10px}
+ul.rules li::before{content:"—";color:var(--seal);font-weight:800;flex:none}
+ul.rules li em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-2);margin-top:2px}
+
+.bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--ink);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:9px;align-items:center;
+}
+.bar .s{flex:1;color:#fff;font-size:11.5px;opacity:.7}
+button{font-family:inherit;font-size:13.5px;font-weight:700;padding:11px 15px;border-radius:2px;cursor:pointer;border:1px solid #fff;background:transparent;color:#fff}
+button.solid{background:#fff;color:var(--ink)}
+button:active{transform:translateY(1px)}
+dialog{border:1px solid var(--ink);padding:0;max-width:92vw;width:640px;background:var(--card)}
+dialog::backdrop{background:rgba(18,22,28,.6)}
+dialog .dh{padding:12px 14px;border-bottom:1px solid var(--rule);font-weight:800;font-size:14px;display:flex;align-items:center}
+dialog .dh button{margin-left:auto;border-color:var(--ink);color:var(--ink);padding:6px 11px;font-size:12px}
+dialog textarea{border:0;border-radius:0;min-height:52vh;font-size:12.5px;padding:13px;background:#fbfaf7}
+footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;border-top:1px solid var(--rule);margin-top:26px}
+</style>
+</head>
+<body>
+
+<div class="band">축의금 귀속은 상견례 당일 결론. 식장 계약 후로 미루면 협상력 상실.<span class="cnt" id="cnt">미결 —</span></div>
+
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">상견례 협의 체크리스트 · 2026년 9월</div>
+  <h1>상견례 안건 및<br>결정 기록</h1>
+  <div class="sub">신랑측 부산 · 신부측 경남 고성 · 하객 135~165명(신랑혼주 다수/신부혼주 30) · 비용 당사자 전액 부담 전제</div>
+</header>
+
+<h2>0단계 — 부부 사전합의 <small>상견례 전 필수</small></h2>
+<p class="lead">이 단계를 건너뛰면 양가 앞에서 신랑·신부 이견이 노출되고, 논의가 각 부모 입장으로 재편됨. 상견례에서는 <b>제안은 당사자가, 결정은 양가가</b> 하는 구조를 유지할 것.</p>
+<div id="s0"></div>
+
+<h2>A — 금액 직결 <small>당일 결론 필수</small></h2>
+<div id="sA"></div>
+
+<h2>B — 일정 선결 <small>식장 예약 역산에 직결</small></h2>
+<div id="sB"></div>
+
+<h2>C — 형식·관행 <small>당일 또는 이후</small></h2>
+<div id="sC"></div>
+
+<h2>예산 2안 비교 <small>예식 준비비만 · 단위: 만원</small></h2>
+<p class="lead">혼수·주거는 별도 프로젝트로 분리됨. 신혼여행 목적지에 따라 다른 항목의 압축 폭이 결정됨. 상견례에서 예단 방침을 정할 때 이 표를 근거로 제시할 것.</p>
+<table id="budget">
+  <tr><th>항목</th><th style="text-align:right">A안 유럽</th><th style="text-align:right">B안 싱가포르·홍콩</th></tr>
+  <tr data-row="hall"><td>예식장(대관+식대)</td><td class="n">1,100~1,300</td><td class="n">1,100~1,400</td></tr>
+  <tr><td>스드메(드메 부산·촬영 수도권)</td><td class="n">250~300</td><td class="n">250~350</td></tr>
+  <tr><td>본식스냅·DVD</td><td class="n">100~150</td><td class="n">100~180</td></tr>
+  <tr><td>예물 — 커플링 <b>확정</b></td><td class="n">100~200</td><td class="n">100~200</td></tr>
+  <tr><td>예단 — 최소화 목표</td><td class="n">0~200</td><td class="n">0~200</td></tr>
+  <tr><td>혼주 메이크업·한복 대여</td><td class="n">80~120</td><td class="n">80~120</td></tr>
+  <tr><td>혼주·가족 정장</td><td class="n">100~250</td><td class="n">100~250</td></tr>
+  <tr><td>청첩장 + 청첩장 모임</td><td class="n">115~230</td><td class="n">115~230</td></tr>
+  <tr><td>상견례·부케·사회축가</td><td class="n">110~200</td><td class="n">110~200</td></tr>
+  <tr><td>폐백·이바지 (생략 검토)</td><td class="n">0~150</td><td class="n">0~150</td></tr>
+  <tr><td>수도권↔부산 교통·숙박</td><td class="n">80~150</td><td class="n">80~150</td></tr>
+  <tr><td>신혼여행 8박9일 2인</td><td class="n">800~1,000</td><td class="n">400~600</td></tr>
+  <tr><td>예비비</td><td class="n">200~300</td><td class="n">200~300</td></tr>
+  <tr class="tot" data-row="total"><td>총지출</td><td class="n">3,035~4,730</td><td class="n">2,635~4,330</td></tr>
+  <tr data-row="settle"><td>축의금 A안 정산 회수</td><td class="n">−605</td><td class="n">−605</td></tr>
+  <tr class="tot" data-row="net"><td>실질 순부담</td><td class="n">2,430~4,125</td><td class="n">2,030~3,725</td></tr>
+</table>
+<p class="lead" style="margin-top:8px"><b>혼수·주거는 별도 프로젝트로 분리됨.</b> 위는 예식 준비비만. <b>A안(유럽)은 최소 시나리오에서도 3,035만원으로 이미 3,000만원 초과.</b> 3,000만원 방어 조건은 ① B안 선택 ② 예단 생략 ③ 폐백·이바지 생략 ④ 정장 대여 전환 — 4개 동시 충족. 축의금 회수 605만원은 하객 145명·혼주측 120명·축의금 5만원·식대 4만원 가정 [추측입니다]. 회수액을 예산 계획에 선반영하지 말 것.</p>
+
+<h2>진행 원칙</h2>
+<ul class="rules">
+  <li><div>A1(축의금 귀속)은 반드시 당일 결론<em>"나중에 얘기하자"로 넘어가면 식장 계약 후 협상력 상실</em></div></li>
+  <li><div>박람회 견적서 실물 지참<em>수치 없이 협의하면 관행·정서 논리에 밀림</em></div></li>
+  <li><div>하객 85%가 혼주 하객이라는 사실을 먼저 제시<em>지출 구조 설명의 출발점</em></div></li>
+  <li><div>민감 안건은 방향만 확인, 금액 확정은 이후 서면으로<em>예단·예물은 당일 세부 금액 논쟁 회피</em></div></li>
+  <li><div>결정된 사항은 당일 이 문서에 기록 후 양측에 공유<em>구두 합의는 이후 해석 충돌</em></div></li>
+</ul>
+
+<h2>상견례 후 즉시 처리</h2>
+<div id="sD"></div>
+
+<footer>
+  작성일 2026-08-14 · 근거: 한국소비자원 참가격(2025.4·2026.8), 공정거래위원회 표준약관, 국세청·기획재정부(결혼세액공제), LH청약플러스·경기주거복지포털<br>
+  미확인: 축의금 귀속 관련 조세심판례의 개별 사안 적용 여부 · LH 매입임대 II형 소득요건(출처 간 상충) · 부천·김포·시흥 결혼축하금 조례 · 고성→부산 대절버스 실견적<br>
+  ※ 법률·세무 자문 아님. 증여세·계약 판단은 전문가 확인 필요.
+</footer>
+</div>
+
+<div class="bar">
+  <div class="s" id="status">자동 저장 준비 중</div>
+  <button id="export">결정사항 내보내기</button>
+</div>
+
+<dialog id="dlg">
+  <div class="dh">결정 기록 — 길게 눌러 복사<button onclick="document.getElementById('dlg').close()">닫기</button></div>
+  <textarea id="out" readonly></textarea>
+</dialog>
+
+<script>
+const ITEMS=[
+{s:'s0',p:'O',id:'p1',t:'축의금 정산 — 부부 합의 완료 (하한 A안)',
+ why:'<b>합의됨: 하한선 = A안 식대정산.</b> 남자측 상한은 전체 양도. 협상은 상한에서 시작해 하한으로 후퇴할 것. 축의금 5만원·식대 4만원 가정 시 A안 대비 전체 양도의 추가 이익은 약 149만원으로 크지 않음 — 무리한 관철보다 A안 확보와 미참석분 귀속이 실익 [추측입니다].',
+ opts:['제안 시작: 예식 전체비용 정산(C안)','제안 시작: 식장 총비용 정산(B안)','제안 시작: 식대정산(A안) — 권장 안 함'],
+ f:['이 안을 누가 어떻게 꺼낼 것인가','후퇴 하한선 재확인 (A안 식대정산 — 그 이하 수용 안 함)']},
+{s:'s0',p:'O',id:'p1b',t:'정산 실행 조건 — 사전 문안 준비',
+ why:'"축의금 주겠다" 구두 합의 후 미이행 사례 다수. <b>시점·계산근거·미참석분 3가지를 함께 정하지 않으면 합의는 사실상 무효.</b> 미참석 하객 송금분은 식대가 발생하지 않으므로 A안에서도 전액 당사자 귀속을 요구할 근거가 있음.',
+ opts:[],
+ f:['정산 시점 (예: 예식 후 2주 이내)','계산 근거 (방명록·축의금 명부·좌석 집계 중)','미참석 하객 축의금 귀속']},
+{s:'s0',p:'O',id:'p2',t:'예물 — 부부 합의 완료 (커플링만)',
+ why:'<b>합의됨: 커플링 수준 100~200만원.</b> 예물은 신랑↔신부 당사자 간 교환이므로 <b>당사자 예산에서 직접 지출</b>. 양가 협의 대상이 아니라 통보 사항에 가까움.',
+ opts:[],f:['상한 금액(만원)','구입 시점']},
+{s:'s0',p:'O',id:'p2b',t:'예단 — 최소화 제안 (양가 뜻 존중)',
+ why:'예단은 신부측→신랑측 <b>집안</b> 간 사안이며, 관행상 신부측 부모 지출·봉채비로 일부 반환. <b>당사자가 예단비를 부담하면 봉채비는 부모에게 귀속되어 당사자 순유출 100%가 됨.</b> 지출 주체와 봉채비 수령 주체를 반드시 함께 정할 것. 대안: 예단 대신 양가 부모님께 동일 금액 선물.',
+ opts:['생략 제안','현금 없이 현물 최소만','양가 부모님 선물로 대체 제안','현금 예단 + 봉채비 수령 주체를 당사자로'],
+ f:['예단비 지출 주체','봉채비 수령 주체','상한 금액(만원)']},
+{s:'s0',p:'O',id:'p3',t:'신혼여행 A안/B안 택일',
+ why:'유럽 8박9일 2인 800만원 이상, 싱가포르·홍콩 400~600만원대 [추측입니다]. 200~400만원 차이가 예단·혼수 압축 폭을 결정.',
+ opts:['A안 유럽 (예물·혼수 최소 압축 전제)','B안 싱가포르·홍콩','상견례 후 견적 받고 결정'],f:['']},
+{s:'s0',p:'O',id:'p4',t:'혼인신고 시점 — 우리 입장 확정',
+ why:'결혼세액공제 100만원은 <b>2026.12.31 혼인신고분까지</b>. 예식(2027~28)과 분리 가능. 단 혼인신고 시 소득·자산이 부부합산으로 전환되어 LH/GH 임대·청약 자격에 영향. 목표 임대유형을 먼저 특정할 것.',
+ opts:['2026년 내 신고 (세액공제 우선)','예식 전후로 신고 (임대·청약 자격 우선)','LH/GH 유형 확정 후 결정'],f:['부부합산 소득이 목표 유형 상한 이내인가']},
+{s:'s0',p:'O',id:'p5',t:'총예산 상한 및 예비비 비율 확정',
+ why:'예비비 비율은 사용자 결정 사항. 하객 증가·숨은비용 대비.',
+ opts:[],f:['총예산 상한(만원)','예비비 비율(%)']},
+
+{s:'sA',p:'A',id:'a1',t:'축의금 귀속 방식',
+ why:'단일 최대 금액 안건. 전액 당사자 귀속 시 실질 순부담이 약 1,300만~1,700만원 감소 [추측입니다 — 축의금 총액 미확정]. <b>당일 결론 필수.</b>',
+ opts:[],f:['합의 내용','미합의 시 다음 논의 기한']},
+{s:'sA',p:'A',id:'a2',t:'비용 분담 구조',
+ why:'"당사자 전액 부담" 원칙을 그대로 유지할지, 항목별 분담으로 수정할지 확인.',opts:[],f:['합의 내용']},
+{s:'sA',p:'A',id:'a3',t:'양가 하객 명단 상한',
+ why:'신랑 혼주 80~110명 / <b>신부 혼주 30명</b>으로 약 3:1 비대칭. 신랑 혼주가 임원 출신이라 명단 확대 압력이 높음. <b>1인 증가 = 식대 3.2만~4.5만원 직접 증가.</b> 보증인원은 120~130명으로 계약 예정이므로 상한 확정이 계약 조건에 직결. 초과분 부담 주체를 함께 정할 것.',
+ opts:[],f:['신랑측 상한(명)','신부측 상한(명)','초과분 식대 부담 주체']},
+{s:'sA',p:'A',id:'a4',t:'예단·예물 범위와 상한',
+ why:'예산 A안 기준 100~150만원 압축 전제. 형식보다 금액 상한 합의가 실효적.',opts:[],f:['합의 내용','상한 금액(만원)']},
+{s:'sA',p:'A',id:'a5',t:'한복·혼주 예복',
+ why:'대여 여부와 비용 부담 주체. 통상 각 혼주 부담이나 당사자 전액 부담 전제와 충돌 가능.',opts:[],f:['합의 내용']},
+
+{s:'sB',p:'B',id:'b1',t:'예식 지역 — 부산 확정 여부',
+ why:'신랑 혼주 80~110명 / 신부 혼주 30명 / 본인 25명. 혼주 하객 대다수가 영남권이므로 <b>객관적으로 부산 우위</b>. 다만 <b>하객 비대칭이 약 3:1</b>인 상태에서 장소까지 신랑측 지역이면 신부측이 양쪽에서 밀린 구조로 인식될 수 있음. 이 점을 먼저 인정하고 제안할 것.',
+ opts:['부산 확정','수도권 재검토','추가 논의'],f:['비고']},
+{s:'sB',p:'B',id:'b2',t:'예식 시기·요일',
+ why:'비수기(1·2·7·8월)·평일 선택 시 식장비 최대 325만원 절감(한국소비자원 2026.8). 현재 방침은 <b>비수기 주말</b>.',
+ opts:[],f:['목표 시기','요일·시간대']},
+{s:'sB',p:'B',id:'b3',t:'고성측 하객 이동 수단',
+ why:'신부 혼주 하객 30명 규모이므로 <b>45인승 불필요</b>. 25인승 소형버스 또는 개별 이동으로 충분. 고성→부산 약 110km. 고령 하객 비중에 따라 결정.',
+ opts:['소형버스(25인승) 운행','개별 이동','미정'],f:['대수 및 비용 부담 주체']},
+{s:'sB',p:'B',id:'b4',t:'식장 예약 착수 시점',
+ why:'예식일 12~18개월 전 예약이 55.3%로 최다. 2027 하반기 목표면 <b>2026년 하반기~2027년 상반기</b> 착수.',
+ opts:[],f:['착수 목표 시점','후보 식장']},
+
+{s:'sC',p:'C',id:'c1',t:'예식 형식 — 주례·폐백 유무',why:'비용·진행 시간에 영향. 갈등 소지는 낮음.',opts:[],f:['합의 내용']},
+{s:'sC',p:'C',id:'c2',t:'상견례 장소·비용 부담',
+ why:'신랑측 부산·신부측 고성 기준 중간 결절점은 창원(마산)·진주. 예식지가 부산이면 부산 진행도 합리적. 비용은 사전 합의가 관행.',
+ opts:['부산','창원·마산','진주','기타'],f:['일시','비용 부담']},
+{s:'sC',p:'C',id:'c3',t:'선물·인사 방식',why:'첫 대면 관례. 사전에 양측 수준을 맞출 것.',opts:[],f:['합의 내용']},
+
+{s:'sD',p:'A',id:'d1',t:'결정사항 양측 서면 공유',why:'구두 합의는 이후 해석 충돌. 이 문서 내보내기로 양가에 전달.',opts:[],f:['공유 방법·일자']},
+{s:'sD',p:'B',id:'d2',t:'LH/GH 목표 임대유형 특정',
+ why:'부부합산 7,000만~1억 구간 → I형(맞벌이 90%)은 <b>경계선상, 초과 위험</b>. <b>II형·행복주택(120%)을 주 타깃, I형 병행 지원</b> 권고. 버팀목 전세대출(7,500만 이하)·경기청년 결혼지원(6,000만 이하)은 구간 상단이면 탈락. <b>II형 소득요건은 출처 간 상충 — 공고문 원문 확인 필요.</b>',
+ opts:[],f:['목표 유형','확인한 공고명']},
+{s:'sD',p:'B',id:'d3',t:'위약금 기준 원문 대조',
+ why:'소비자분쟁해결기준상 전액환급 기준이 90일/150일로 자료 간 상충. <b>식장 계약 전 law.go.kr 원문 확인 필수.</b>',
+ opts:[],f:['확인 결과']}
+];
+
+let D={};
+const $=s=>document.querySelector(s);let t=null;
+function status(m){$('#status').textContent=m}
+
+/* 저장 어댑터 — 박람회 양식과 동일. localStorage 기본 + window.storage 병행(있을 때). */
+const CKEY='sanggyeonrye-2026-09';
+const hasArtifactStore=!!(window.storage&&typeof window.storage.get==='function'&&typeof window.storage.set==='function');
+const store={
+  async read(){
+    let local=null,artifact=null;
+    try{local=localStorage.getItem(CKEY)}catch(e){}
+    if(hasArtifactStore){try{const r=await window.storage.get(CKEY);artifact=(r&&r.value!=null)?r.value:null}catch(e){}}
+    return local!=null?local:artifact;
+  },
+  async write(v){
+    let ok=false;
+    try{localStorage.setItem(CKEY,v);ok=true}catch(e){}
+    if(hasArtifactStore){try{await window.storage.set(CKEY,v);ok=true}catch(e){}}
+    return ok;
+  }
+};
+
+async function load(){
+  try{const v=await store.read();if(v)D=JSON.parse(v)}
+  catch(e){status('저장 데이터 형식 오류 — 새로 시작')}
+  render();
+  applyFeed();
+  window.addEventListener('focus',applyFeed);
+  window.addEventListener('storage',e=>{ if(!e.key||e.key==='wedding-fair-feed') applyFeed(); });
+}
+function save(){
+  clearTimeout(t);
+  t=setTimeout(async()=>{
+    const ok=await store.write(JSON.stringify(D));
+    status(ok?('저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})):'저장 실패 — 내보내기로 복사할 것');
+  },500);
+}
+
+/* 박람회 양식이 남긴 예식장 실측 견적(wedding-fair-feed)을 읽어 예산표에 자동 반영.
+   예식장 행을 실측 최소지출로 교체하고, 총지출·실질순부담을 재합산. 재실행해도 동일 결과(멱등). */
+function applyFeed(){
+  const tb=document.getElementById('budget'); if(!tb) return;
+  let feed=null;
+  try{const f=localStorage.getItem('wedding-fair-feed');if(f)feed=JSON.parse(f)}catch(e){}
+  if(!feed || !feed.count || feed.minSpend==null) return;
+  const hallRow=tb.querySelector('[data-row="hall"]'),
+        totalRow=tb.querySelector('[data-row="total"]'),
+        netRow=tb.querySelector('[data-row="net"]');
+  if(!hallRow||!totalRow||!netRow) return;
+  const won=n=>Math.round(n).toLocaleString('ko-KR');
+  const fmt=a=>a[0]===a[1]?won(a[0]):won(a[0])+'~'+won(a[1]);
+  const parse=txt=>{ txt=String(txt).replace(/,/g,'').replace(/[−–]/g,'-').trim();
+    const m=txt.match(/(-?\d+)\s*~\s*(-?\d+)/); if(m)return[+m[1],+m[2]];
+    const s=txt.match(/-?\d+/); return s?[+s[0],+s[0]]:[0,0]; };
+  // 델타 방식: 원 표의 총계 baseline을 보존하고, 실측 견적이 예식장 행을 바꾼 만큼만 총지출·순부담에 가감.
+  // (원 표의 총계는 행 합과 미세 불일치가 있어, 전체 재합산 대신 차이만 반영해 임의 수정처럼 보이지 않게 함)
+  const hc=hallRow.querySelectorAll('td.n');
+  const curA=parse(hc[0].textContent), curB=parse(hc[1].textContent);
+  const hall=[feed.minSpend,feed.maxSpend];
+  const dA=[hall[0]-curA[0], hall[1]-curA[1]], dB=[hall[0]-curB[0], hall[1]-curB[1]];
+  const bump=row=>{ const c=row.querySelectorAll('td.n');
+    const a=parse(c[0].textContent), b=parse(c[1].textContent);
+    c[0].innerHTML=fmt([a[0]+dA[0],a[1]+dA[1]])+' <span class="feedbadge">견적</span>';
+    c[1].innerHTML=fmt([b[0]+dB[0],b[1]+dB[1]])+' <span class="feedbadge">견적</span>'; };
+  bump(totalRow); bump(netRow);                       // 예식장 행 덮어쓰기 전에 델타 적용
+  hc[0].innerHTML=fmt(hall)+' <span class="feedbadge">견적</span>';
+  hc[1].innerHTML=fmt(hall)+' <span class="feedbadge">견적</span>';
+  let fn=document.getElementById('feedNote');
+  if(!fn){ fn=document.createElement('p'); fn.className='lead'; fn.id='feedNote'; tb.parentNode.insertBefore(fn,tb); }
+  const venues=(feed.venues||[]).map(x=>x.name+' '+won(x.spend)+'만').join(' · ');
+  fn.textContent='박람회 견적 반영됨 — 예식장 실측 최소지출 '+fmt(hall)+'만원 (업체 '+feed.count+'곳: '+venues+'). 예식장 행·총지출·실질순부담 자동 갱신(원 견적과의 차액만 반영).';
+}
+function render(){
+  ['s0','sA','sB','sC','sD'].forEach(s=>{
+    $('#'+s).innerHTML=ITEMS.filter(i=>i.s===s).map(it=>{
+      const d=D[it.id]||{};
+      return `<details class="item ${d.done?'done':''}" id="i-${it.id}">
+        <summary><span class="pri ${it.p}">${it.p==='O'?'사전':it.p}</span>${it.t}<span class="st">${d.done?'결정됨':'미결'}</span></summary>
+        <div class="body">
+          <div class="why">${it.why}</div>
+          ${it.opts.length?`<div class="opts">${it.opts.map((o,n)=>`
+            <label><input type="radio" name="r-${it.id}" data-id="${it.id}" data-opt="${n}" ${d.opt==n?'checked':''}><span>${o}</span></label>`).join('')}</div>`:''}
+          ${it.f.filter(Boolean).map((f,n)=>`<label class="f"><i>${f}</i><textarea data-id="${it.id}" data-fi="${n}">${(d.f&&d.f[n])||''}</textarea></label>`).join('')}
+          <div class="settle"><input type="checkbox" data-id="${it.id}" data-done="1" ${d.done?'checked':''}><span>결정 완료로 표시</span></div>
+        </div></details>`;
+    }).join('');
+  });
+  count();
+}
+function count(){
+  const a=ITEMS.filter(i=>i.p==='A'||i.p==='O');
+  const open=a.filter(i=>!(D[i.id]&&D[i.id].done)).length;
+  $('#cnt').textContent = open?`미결 ${open}건`:'전부 결정';
+}
+document.addEventListener('input',e=>{
+  const t=e.target,id=t.dataset.id;if(!id)return;
+  D[id]=D[id]||{f:[]};
+  if(t.dataset.opt!==undefined)D[id].opt=+t.dataset.opt;
+  if(t.dataset.fi!==undefined){D[id].f=D[id].f||[];D[id].f[+t.dataset.fi]=t.value}
+  if(t.dataset.done){
+    D[id].done=t.checked;
+    const el=document.getElementById('i-'+id);
+    el.classList.toggle('done',t.checked);
+    el.querySelector('.st').textContent=t.checked?'결정됨':'미결';
+    count();
+  }
+  save();
+});
+$('#export').onclick=()=>{
+  const L=['상견례 협의 기록 · 2026년 9월','신랑측 부산 / 신부측 경남 고성','—'.repeat(20)];
+  const secN={s0:'0단계 부부 사전합의',sA:'A 금액 직결',sB:'B 일정 선결',sC:'C 형식·관행',sD:'상견례 후 처리'};
+  let cur='';
+  ITEMS.forEach(it=>{
+    if(it.s!==cur){cur=it.s;L.push('','■ '+secN[cur])}
+    const d=D[it.id]||{};
+    L.push(`${d.done?'[결정]':'[미결]'} ${it.t}`);
+    if(d.opt!==undefined&&it.opts[d.opt])L.push(`   → ${it.opts[d.opt]}`);
+    it.f.filter(Boolean).forEach((f,n)=>{if(d.f&&d.f[n])L.push(`   ${f}: ${d.f[n]}`)});
+  });
+  const open=ITEMS.filter(i=>(i.p==='A'||i.p==='O')&&!(D[i.id]&&D[i.id].done));
+  if(open.length){L.push('','⚠ 미결 필수 안건');open.forEach(i=>L.push('   · '+i.t))}
+  L.push('','※ 법률·세무 자문 아님. 증여세·계약 판단은 전문가 확인 필요.');
+  $('#out').value=L.join('\n');$('#dlg').showModal();
+};
+load();
+</script>
+</body>
+</html>
