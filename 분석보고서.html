@@ -217,8 +217,11 @@ $('#refresh').onclick=loadAll;
 $('#printBtn').onclick=()=>window.print();
 /* 뒤로가기(입력 폼) 링크도 절대 URL이어야 함(샌드박스 iframe). referrer로 잡고 서버로 보정. */
 function webAppExecUrl(){
-  const m=(document.referrer||'').match(/https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec/);
-  return m?m[0]:'';
+  // 정규식 리터럴은 Apps Script 샌드박스 파서를 깨뜨릴 수 있어 문자열 처리만 사용
+  var ref=document.referrer||'';
+  if(ref.indexOf('https://script.google.com/macros/s/')!==0) return '';
+  var end=ref.indexOf('/exec');
+  return end>0 ? ref.slice(0, end+5) : '';
 }
 function setBackAbs(url){ const bl=$('#backLink'); if(bl&&url){ bl.href=url; } }
 if(isGAS()){

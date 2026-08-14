@@ -458,8 +458,11 @@ async function load(){
 /* Apps Script는 폼을 googleusercontent 샌드박스 iframe에서 띄우므로 상대경로 '?page=report'가
    깨짐. /exec 절대 URL로 새 탭에서 열어야 함. referrer(부모=/exec)로 즉시 잡고, 서버로 보정. */
 function webAppExecUrl(){
-  const m=(document.referrer||'').match(/https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec/);
-  return m?m[0]:'';
+  // 정규식 리터럴은 Apps Script 샌드박스 파서를 깨뜨릴 수 있어 문자열 처리만 사용
+  var ref=document.referrer||'';
+  if(ref.indexOf('https://script.google.com/macros/s/')!==0) return '';
+  var end=ref.indexOf('/exec');
+  return end>0 ? ref.slice(0, end+5) : '';
 }
 function setReportLinkAbs(url){
   const rl=$('#reportLink'); if(!rl||!url) return;
