@@ -453,12 +453,15 @@ function initTransportUI(){
     const lb=$('#linkBadge'); if(lb) lb.textContent='내장 서버';
     const ep=$('#endpoint'); if(ep){ ep.value='(이 웹앱에 내장됨 · 설정 불필요)'; ep.disabled=true; }
     if(rl) rl.href='?page=report';
+    if($('#status') && $('#status').textContent==='자동 저장 준비 중') status('서버 연결됨 · 입력하면 자동 저장·시트 반영');
   }else{
     if(rl) rl.href='분석보고서.html';
   }
 }
-/* google.script API가 늦게 로드돼도 배지·링크가 확정되도록 로드 완료 후 한 번 더 갱신 */
+/* google.script API가 늦게 주입돼도 배지·링크가 확정되도록:
+   ① 로드 완료 시 재갱신 ② 감지될 때까지 잠깐 폴링(최대 ~6초). 파일 모드면 조용히 종료. */
 window.addEventListener('load', initTransportUI);
+(function pollGAS(n){ if(isGAS()){ initTransportUI(); return; } if(n>0) setTimeout(()=>pollGAS(n-1), 300); })(20);
 function linkBadge(on){
   const b=$('#linkBadge');
   b.textContent = on?'연결됨':'미연결';
