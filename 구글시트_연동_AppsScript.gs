@@ -104,12 +104,18 @@ function sheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
-    sh = ss.insertSheet(SHEET_NAME);
-    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
-      .setFontWeight('bold').setBackground('#12161c').setFontColor('#ffffff');
-    sh.setFrozenRows(1);
-    sh.setColumnWidth(13, 420);   // 점검답변
-    sh.setColumnWidth(15, 260);   // 메모
+    try {
+      sh = ss.insertSheet(SHEET_NAME);
+      sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
+        .setFontWeight('bold').setBackground('#12161c').setFontColor('#ffffff');
+      sh.setFrozenRows(1);
+      sh.setColumnWidth(13, 420);   // 점검답변
+      sh.setColumnWidth(15, 260);   // 메모
+    } catch (e) {
+      // 동시 호출(예: 보고서의 stats+rows 병렬)이 같은 시트를 만들려는 경쟁 → 이미 생성된 것 사용
+      sh = ss.getSheetByName(SHEET_NAME);
+      if (!sh) throw e;
+    }
   }
   return sh;
 }

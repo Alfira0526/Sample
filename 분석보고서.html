@@ -108,10 +108,10 @@ footer{font-size:11px;color:var(--ink-2);padding:20px 0 6px;line-height:1.6;bord
 <script>
 const $=s=>document.querySelector(s);
 function status(m){$('#status').textContent=m}
-const GAS=(typeof google!=='undefined'&&google.script&&google.script.run);
+function isGAS(){ return !!(typeof google!=='undefined'&&google&&google.script&&google.script.run); }
 function getEp(){ try{const r=localStorage.getItem('fair-2026-08-15'); if(r){const d=JSON.parse(r); return (d&&d.ep)||''}}catch(e){} return ''; }
 function call(action){
-  if(GAS){
+  if(isGAS()){
     return new Promise((res,rej)=>{
       const run=google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej(new Error((e&&e.message)||'서버 오류')));
       if(action==='stats') run.apiStats();
@@ -215,7 +215,8 @@ async function loadAll(){
 }
 $('#refresh').onclick=loadAll;
 $('#printBtn').onclick=()=>window.print();
-if(GAS){ $('#backLink').href='?'; } // GAS: 폼은 파라미터 없는 같은 웹앱
+if(isGAS()){ $('#backLink').href='?'; } // GAS: 폼은 파라미터 없는 같은 웹앱
+window.addEventListener('load',()=>{ if(isGAS()) $('#backLink').href='?'; });
 loadAll();
 </script>
 </body>
