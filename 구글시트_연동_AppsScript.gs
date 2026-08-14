@@ -15,7 +15,10 @@
  *      - HTML 파일 추가(＋ › HTML) 이름 'form'   → '박람회_현장점검_양식.html' 전체 붙여넣기
  *      - HTML 파일 추가(＋ › HTML) 이름 'report' → '분석보고서.html' 전체 붙여넣기
  *    ※ 파일명은 반드시 form / report (확장자 .html 자동)
- * 3) 아래 API_KEY 에 공공데이터포털 Decoding 인증키 입력(사업자 조회용, 없어도 저장은 동작)
+ * 3) 스크립트 속성에 인증키 저장(⚙ 프로젝트 설정 › 스크립트 속성):
+ *      - NTS_API_KEY  : 공공데이터포털 Decoding 인증키(사업자 조회용, 없어도 저장은 동작)
+ *      - GITHUB_TOKEN : 파인그레인드 PAT, 해당 저장소 Contents=Read/Write(정합성 원장 커밋용)
+ *    ※ 인증키·토큰을 코드에 직접 넣지 말 것(공개 저장소 노출 위험).
  * 4) 배포 › 새 배포 › 유형 "웹 앱"
  *      실행 계정: 나 / 액세스 권한: 모든 사용자   ← 반드시
  * 5) 생성된 웹 앱 URL(…/exec)이 곧 접속 링크.
@@ -30,9 +33,12 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-var API_KEY = '4b5cba233308ce9653610e67190d860a30c78771b96e6e0bdb61dca68dc94e4c';   // 공공데이터포털 Decoding 인증키
-// ※ 비밀정보. 이 파일을 타인에게 공유하거나 공개 저장소에 올리지 말 것.
-// ※ 유출 우려 시 공공데이터포털 마이페이지에서 재발급할 것.
+// 공공데이터포털 Decoding 인증키(사업자 조회용)는 코드에 두지 말 것(공개 저장소 노출 위험).
+// Apps Script: 프로젝트 설정 › 스크립트 속성 › NTS_API_KEY 에 저장. 없으면 조회 기능만 비활성(저장은 정상).
+function ntsKey_() {
+  try { return PropertiesService.getScriptProperties().getProperty('NTS_API_KEY') || ''; }
+  catch (e) { return ''; }
+}
 var SHEET_NAME = '박람회_업체';
 var NTS_URL = 'https://api.odcloud.kr/api/nts-businessman/v1/status';
 
@@ -110,7 +116,7 @@ function sheet_() {
 
 function ping_() {
   var sh = sheet_();
-  return { ok: true, sheet: sh.getParent().getName(), rows: Math.max(0, sh.getLastRow() - 1), apiKey: !!API_KEY };
+  return { ok: true, sheet: sh.getParent().getName(), rows: Math.max(0, sh.getLastRow() - 1), apiKey: !!ntsKey_() };
 }
 
 /**
@@ -162,7 +168,8 @@ function upsert_(rows) {
  * [확인필요] API 규격·엔드포인트는 공공데이터포털 문서 기준으로 최종 확인할 것
  */
 function verify_(bno) {
-  if (!API_KEY) return { ok: false, error: 'API_KEY 미설정 — 스크립트 상단에 인증키 입력 필요' };
+  var API_KEY = ntsKey_();
+  if (!API_KEY) return { ok: false, error: 'NTS_API_KEY 미설정 — 스크립트 속성에 공공데이터포털 인증키 입력 필요' };
   var b = String(bno || '').replace(/[^0-9]/g, '');
   if (b.length !== 10) return { ok: false, error: '사업자번호 10자리 아님' };
 
