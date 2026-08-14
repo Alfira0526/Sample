@@ -313,11 +313,12 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 window.addEventListener('error', function(ev){
   try{
     var s=document.getElementById('status');
-    if(s){ s.textContent='⚠ '+((ev&&ev.message)||'unknown')+' @L'+((ev&&ev.lineno)||'?')+':C'+((ev&&ev.colno)||'?'); s.style.color='#ffb3ab'; }
+    if(s){ s.textContent='⚠ '+((ev&&ev.message)||'unknown')+' | 마지막통과블록 b='+(window.__b||0)+' → b'+((window.__b||0)+1)+' 구간 문제'; s.style.color='#ffb3ab'; }
   }catch(e){}
 });
 </script>
 <script>
+window.__b=1;
 const COMMON = [
   ["c1","견적서를 서면으로 주실 수 있습니까? 유효기간이 며칠입니까?","전 항목 명시 요구 · 위험: 구두로만 안내"],
   ["c2","이 금액에 부가세가 포함된 금액입니까?","VAT 별도면 총액 10% 상승 · 위험: \"보통 별도예요\""],
@@ -386,6 +387,9 @@ const FLAGS = [
   ["f7","계약금 환불 불가라고 안내했다"]
 ];
 
+</script>
+<script>
+window.__b=2;
 let D = {v:[],chk:{}};
 const $ = s=>document.querySelector(s);
 const cards = $('#cards');
@@ -531,6 +535,9 @@ function call(action,payload){
   return fetch(D.ep,{method:'POST',body:JSON.stringify({action,...payload})})
     .then(res=>{ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); });
 }
+</script>
+<script>
+window.__b=3;
 function flat(v){
   const spec = specOf(v.type);
   const ans=[...COMMON,...spec].filter(([k])=>v.q[k]&&(v.q[k].on||v.q[k].a))
@@ -626,6 +633,9 @@ function qBlock(v,i,list,title){
       <textarea class="qa" rows="1" placeholder="답변 메모" data-v="${i}" data-qa="${k}">${v.q[k]?(v.q[k].a||''):''}</textarea>
     </div></div>`).join('')+`</div>`;
 }
+</script>
+<script>
+window.__b=4;
 function render(){
   cards.innerHTML = D.v.map((v,i)=>{
     const spec = specOf(v.type);
@@ -731,6 +741,9 @@ function calc(i){
 function restoreChk(){
   document.querySelectorAll('[data-k]').forEach(c=>{c.checked=!!D.chk[c.dataset.k]});
 }
+</script>
+<script>
+window.__b=5;
 document.addEventListener('input',e=>{
   const t=e.target, i=t.dataset.v;
   if(t.id==='endpoint'){D.ep=t.value.trim();linkBadge(!!D.ep);save();return}
@@ -825,6 +838,9 @@ $('#syncNow').onclick=async()=>{
 };
 window.addEventListener('online',()=>push());
 
+</script>
+<script>
+window.__b=6;
 $('#export').onclick=()=>{
   const L=['부산 웨딩박람회 현장 기록 · 2026-08-15','목적: 시장조사(계약 없음) · 상견례 근거자료','—'.repeat(20)];
   D.v.forEach((v,i)=>{
@@ -921,7 +937,9 @@ function renderCompare(){
 }
 $('#compare').onclick=()=>{ renderCompare(); $('#cmpDlg').showModal(); };
 $('#cmpN').onchange=renderCompare;
-
+</script>
+<script>
+window.__b=7;
 load();
 /* 진단 breadcrumb: 스크립트 끝까지 도달하면 표시(오류·CSP 여부 구분용). 원인 파악 후 제거. */
 window.__jsAlive='script-end';
