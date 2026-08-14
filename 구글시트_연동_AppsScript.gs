@@ -1,25 +1,33 @@
 /**
- * 박람회 현장점검 양식 ↔ 구글 시트 연동 스크립트
+ * 박람회 현장점검 — Apps Script 통합 웹앱 (입력 폼 + 분석·보고서 + 시트 축적)
  * 작성일: 2026-08-14
  *
- * ── 설치 순서 ──────────────────────────────────────────────
- * 1) 구글 스프레드시트 새로 만들기
- * 2) 확장 프로그램 › Apps Script → 이 코드 전체를 붙여넣기
- * 3) 아래 API_KEY 에 공공데이터포털 인증키 입력 (사업자번호 조회용)
- *    - data.go.kr 접속 → "국세청_사업자등록정보 진위확인 및 상태조회 서비스" 검색
- *    - 활용신청 → 마이페이지에서 "일반 인증키(Decoding)" 복사
- *    - 승인까지 수 분~1일 소요될 수 있음 [확인필요 — 즉시 승인 여부는 서비스별 상이]
- *    - 키를 넣지 않아도 시트 저장 기능은 정상 작동함
- * 4) 배포 › 새 배포 › 유형 "웹 앱"
- *      실행 계정: 나
- *      액세스 권한: 모든 사용자      ← 반드시 이 값
- * 5) 생성된 웹 앱 URL(…/exec)을 HTML 양식의 "연동 설정"에 붙여넣기
+ * ── 이 스크립트 하나로 되는 것 ────────────────────────────────
+ *  · 웹앱 링크(/exec) 하나가 입력 폼과 분석·보고서 페이지를 모두 제공(호스팅)
+ *  · 입력 데이터를 연결된 구글 시트에 온라인 축적(upsert, 중복 행 방지)
+ *  · 국세청 사업자등록 상태조회 중계(verify)
+ *  · 시트 데이터 집계·보고서(stats/rows) 제공
  *
- * ── 동작 ──────────────────────────────────────────────────
- * upsert : 레코드 id 우선, 없으면 사업자번호로 기존 행을 찾아 덮어씀 (중복 행 방지)
- * verify : 국세청 사업자등록 상태조회 API 중계 (CORS 회피 + 키 노출 방지)
- * ping   : 연결 상태 확인
- * ─────────────────────────────────────────────────────────
+ * ── 설치(배포는 PC에서 1회) ──────────────────────────────────
+ * 1) 구글 스프레드시트 새로 만들기 → 확장 프로그램 › Apps Script
+ * 2) 파일 3개 구성:
+ *      - 이 코드를 기본 파일(Code.gs)에 붙여넣기
+ *      - HTML 파일 추가(＋ › HTML) 이름 'form'   → '박람회_현장점검_양식.html' 전체 붙여넣기
+ *      - HTML 파일 추가(＋ › HTML) 이름 'report' → '분석보고서.html' 전체 붙여넣기
+ *    ※ 파일명은 반드시 form / report (확장자 .html 자동)
+ * 3) 아래 API_KEY 에 공공데이터포털 Decoding 인증키 입력(사업자 조회용, 없어도 저장은 동작)
+ * 4) 배포 › 새 배포 › 유형 "웹 앱"
+ *      실행 계정: 나 / 액세스 권한: 모든 사용자   ← 반드시
+ * 5) 생성된 웹 앱 URL(…/exec)이 곧 접속 링크.
+ *      · …/exec            → 입력 폼
+ *      · …/exec?page=report → 분석·보고서 대시보드
+ *    재배포 시 "새 버전"으로 배포해야 변경이 반영됨.
+ *
+ * ── 동작 요약 ────────────────────────────────────────────────
+ *  doGet  : page=report → 보고서 HTML, 그 외 → 폼 HTML (api=ping 이면 JSON 상태)
+ *  doPost : 정적/파일 호스팅(fetch) 하위호환 — ping/upsert/verify/stats/rows
+ *  api*   : GAS 내장 폼이 google.script.run 으로 직접 호출하는 함수(동일 로직)
+ * ─────────────────────────────────────────────────────────────
  */
 
 var API_KEY = '4b5cba233308ce9653610e67190d860a30c78771b96e6e0bdb61dca68dc94e4c';   // 공공데이터포털 Decoding 인증키
@@ -31,6 +39,21 @@ var NTS_URL = 'https://api.odcloud.kr/api/nts-businessman/v1/status';
 var HEADERS = ['최종수정','레코드ID','업체명','부스','유형','사업자번호','사업자상태','과세유형',
                '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모'];
 
+/* ── 라우팅 ─────────────────────────────────────────────── */
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.api === 'ping') {
+    return ContentService.createTextOutput(JSON.stringify(ping_()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  var file = (p.page === 'report') ? 'report' : 'form';
+  var title = (file === 'report') ? '박람회 분석·보고서' : '박람회 현장점검';
+  return HtmlService.createHtmlOutputFromFile(file)
+    .setTitle(title)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
+/* 정적/파일 호스팅(fetch) 하위호환. GAS 내장 폼은 doPost 대신 api* 함수를 직접 호출함 */
 function doPost(e) {
   var out;
   try {
@@ -38,6 +61,8 @@ function doPost(e) {
     if (req.action === 'ping')        out = ping_();
     else if (req.action === 'upsert') out = upsert_(req.rows);
     else if (req.action === 'verify') out = verify_(req.bno);
+    else if (req.action === 'stats')  out = getStats_();
+    else if (req.action === 'rows')   out = getRows_();
     else out = { ok: false, error: 'unknown action' };
   } catch (err) {
     out = { ok: false, error: String(err) };
@@ -46,12 +71,14 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/* GET 으로도 연결 확인 가능 */
-function doGet() {
-  return ContentService.createTextOutput(JSON.stringify(ping_()))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+/* ── google.script.run 진입점(GAS 내장 폼·보고서용) ───────── */
+function apiPing()        { return ping_(); }
+function apiUpsert(rows)  { return upsert_(rows); }
+function apiVerify(bno)   { return verify_(bno); }
+function apiStats()       { return getStats_(); }
+function apiRows()        { return getRows_(); }
 
+/* ── 시트 ───────────────────────────────────────────────── */
 function sheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(SHEET_NAME);
@@ -146,4 +173,72 @@ function verify_(bno) {
     taxType: d.tax_type || '',
     endDt: d.end_dt || ''
   };
+}
+
+/* ── 조회·집계(분석·보고서용) ─────────────────────────────── */
+function getRows_() {
+  var sh = sheet_();
+  var last = sh.getLastRow();
+  var data = last > 1 ? sh.getRange(2, 1, last - 1, HEADERS.length).getValues() : [];
+  var out = [];
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i], o = {};
+    for (var c = 0; c < HEADERS.length; c++) {
+      o[HEADERS[c]] = (r[c] instanceof Date) ? Utilities.formatDate(r[c], Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') : r[c];
+    }
+    if (o['업체명'] || o['사업자번호']) out.push(o);
+  }
+  return { ok: true, rows: out };
+}
+
+/**
+ * 시트 데이터 집계.
+ * 반환: 총건수, 유형별 분포, 예식장 최소지출(목록·min/max/avg),
+ *       위험신호(총합·1개이상 업체·3개이상 업체), 사업자검증 현황
+ */
+function getStats_() {
+  var sh = sheet_();
+  var last = sh.getLastRow();
+  var data = last > 1 ? sh.getRange(2, 1, last - 1, HEADERS.length).getValues() : [];
+  var stats = {
+    ok: true, total: 0, byType: {}, halls: [], hallSummary: null,
+    risk: { total: 0, withAny: 0, with3: 0 },
+    verify: { '계속': 0, '휴업': 0, '폐업': 0, '기타': 0, '미확인': 0 },
+    generatedAt: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'),
+    sheet: sh.getParent().getName()
+  };
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i];
+    var name = String(r[2] || ''), bno = String(r[5] || '');
+    if (!name && !bno) continue;
+    stats.total++;
+
+    var type = String(r[4] || '기타');
+    stats.byType[type] = (stats.byType[type] || 0) + 1;
+
+    if (type === '예식장') {
+      var ms = Number(r[11]);
+      if (!isNaN(ms) && ms > 0) stats.halls.push({ name: name || '미입력', minSpend: ms });
+    }
+
+    var risk = String(r[13] || '');
+    var rc = risk ? risk.split('/').filter(function (s) { return s.replace(/\s/g, ''); }).length : 0;
+    stats.risk.total += rc;
+    if (rc >= 1) stats.risk.withAny++;
+    if (rc >= 3) stats.risk.with3++;
+
+    var st = String(r[6] || '');
+    if (!st) stats.verify['미확인']++;
+    else if (st.indexOf('계속') >= 0) stats.verify['계속']++;
+    else if (st.indexOf('휴업') >= 0) stats.verify['휴업']++;
+    else if (st.indexOf('폐업') >= 0) stats.verify['폐업']++;
+    else stats.verify['기타']++;
+  }
+  var spends = stats.halls.map(function (h) { return h.minSpend; });
+  if (spends.length) {
+    var sum = spends.reduce(function (a, b) { return a + b; }, 0);
+    stats.hallSummary = { count: spends.length, min: Math.min.apply(null, spends), max: Math.max.apply(null, spends), avg: Math.round(sum / spends.length) };
+  }
+  stats.halls.sort(function (a, b) { return a.minSpend - b.minSpend; });
+  return stats;
 }

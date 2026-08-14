@@ -255,6 +255,7 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 <div id="cards"></div>
 <button class="addbtn" id="add">＋ 업체 추가</button>
 <button class="cmpbtn" id="compare">예식장 견적 비교 — 동일 보증인원 기준</button>
+<a class="cmpbtn" id="reportLink" href="분석보고서.html" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">📊 분석·보고서 열기 (축적 데이터)</a>
 
 <h2>절대 하면 안 되는 것</h2>
 <ol class="never">
@@ -439,8 +440,21 @@ async function load(){
   if(!D.chk) D.chk={};
   D.v.forEach(v=>{ if(!v.id) v.id=uid(); if(v.synced===undefined) v.synced=false; if(!Array.isArray(v.photos)) v.photos=[]; });
   if(D.ep){ $('#endpoint').value=D.ep; linkBadge(true); }
+  initTransportUI();
   render();
   restoreChk();
+}
+/* GAS 내장 서빙이면 엔드포인트 설정 불필요 — UI를 그에 맞게 조정하고 보고서 링크를 같은 웹앱으로 연결 */
+function initTransportUI(){
+  const rl=$('#reportLink');
+  if(GAS){
+    linkBadge(true);
+    const lb=$('#linkBadge'); if(lb) lb.textContent='내장 서버';
+    const ep=$('#endpoint'); if(ep){ ep.value='(이 웹앱에 내장됨 · 설정 불필요)'; ep.disabled=true; }
+    if(rl) rl.href='?page=report';
+  }else{
+    if(rl) rl.href='분석보고서.html';
+  }
 }
 function linkBadge(on){
   const b=$('#linkBadge');
@@ -457,12 +471,29 @@ function markSynced(i){
   const b=document.getElementById('sb'+i);
   if(b){b.className='badge sync';b.textContent='저장됨'}
 }
-/* Apps Script 웹앱 호출. 커스텀 헤더를 쓰지 않아야 preflight 없이 통과함 */
-async function call(action,payload){
-  if(!D.ep) throw new Error('연동 URL 미설정');
-  const res = await fetch(D.ep,{method:'POST',body:JSON.stringify({action,...payload})});
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  return await res.json();
+/* 전송 계층 시프트:
+   · Apps Script 웹앱이 이 페이지를 직접 서빙하면 google.script.run 으로 백엔드 함수 직접 호출(같은 링크, 엔드포인트 설정 불필요)
+   · 파일/정적 호스팅이면 기존처럼 fetch(엔드포인트 URL) — 커스텀 헤더 없이 preflight 회피
+   두 경우 모두 Promise 를 반환해 호출부는 동일하게 await 사용. */
+const GAS = (typeof google!=='undefined' && google.script && google.script.run);
+function call(action,payload){
+  payload=payload||{};
+  if(GAS){
+    return new Promise((resolve,reject)=>{
+      const run=google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(e=>reject(new Error((e&&e.message)||'서버 오류')));
+      if(action==='ping')        run.apiPing();
+      else if(action==='upsert') run.apiUpsert(payload.rows);
+      else if(action==='verify') run.apiVerify(payload.bno);
+      else if(action==='stats')  run.apiStats();
+      else if(action==='rows')   run.apiRows();
+      else reject(new Error('unknown action'));
+    });
+  }
+  if(!D.ep) return Promise.reject(new Error('연동 URL 미설정'));
+  return fetch(D.ep,{method:'POST',body:JSON.stringify({action,...payload})})
+    .then(res=>{ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); });
 }
 function flat(v){
   const spec = specOf(v.type);
@@ -483,7 +514,7 @@ function scheduleRetry(){
 }
 function clearRetry(){ retryDelay=0; if(retryTimer){ clearTimeout(retryTimer); retryTimer=null; } }
 async function push(){
-  if(!D.ep) return;
+  if(!GAS && !D.ep) return;
   const idx = D.v.map((v,i)=>i).filter(i=>!D.v[i].synced && (D.v[i].name||D.v[i].biz));
   if(!idx.length){ clearRetry(); return; }
   try{
@@ -726,7 +757,7 @@ document.addEventListener('click',async e=>{
   const bno=(v.biz||'').replace(/[^0-9]/g,'');
   el.style.display='block';
   if(bno.length!==10){el.className='vres bad';el.textContent='사업자번호 10자리를 입력할 것';return}
-  if(!D.ep){el.className='vres bad';el.textContent='연동 설정에서 웹 앱 URL을 먼저 입력할 것';return}
+  if(!GAS && !D.ep){el.className='vres bad';el.textContent='연동 설정에서 웹 앱 URL을 먼저 입력할 것';return}
   el.className='vres';el.textContent='조회 중…';b.disabled=true;
   try{
     const r=await call('verify',{bno});
