@@ -93,10 +93,10 @@
 
 요약 — 자세한 절차는 **[`배포_가이드.md`](./배포_가이드.md)** 참고.
 1. 구글 스프레드시트 → 확장 프로그램 › Apps Script
-2. 파일 3개: `Code.gs`(=`구글시트_연동_AppsScript.gs`), HTML `form`(=`박람회_현장점검_양식.html`), HTML `report`(=`분석보고서.html`)
+2. **`Code.gs` 하나만** 붙여넣기(=`구글시트_연동_AppsScript.gs`). **화면 HTML은 GitHub에서 자동 서빙**되므로 별도 HTML 파일 불필요.
 3. ⚙ 프로젝트 설정 › 스크립트 속성: `GITHUB_TOKEN`(Contents R/W), `NTS_API_KEY`(선택)
 4. 배포 › 웹 앱(실행: 나 / 액세스: 모든 사용자) → `…/exec` 링크 확보
-5. 코드 수정 후에는 **배포 관리 › 새 버전**으로 재배포
+5. **HTML 수정은 재배포 불필요**(GitHub push → 최대 30초 내 자동 반영, 즉시는 `?refresh=1`). `Code.gs`를 바꿀 때만 "새 버전"으로 재배포.
 
 > 브랜치를 기본 브랜치로 병합하면 `Code.gs`의 `GITHUB_BRANCH`와 예산표의 `FEED_URL` 브랜치명을 갱신하세요.
 

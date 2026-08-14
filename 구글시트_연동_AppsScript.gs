@@ -10,11 +10,10 @@
  *
  * ── 설치(배포는 PC에서 1회) ──────────────────────────────────
  * 1) 구글 스프레드시트 새로 만들기 → 확장 프로그램 › Apps Script
- * 2) 파일 3개 구성:
- *      - 이 코드를 기본 파일(Code.gs)에 붙여넣기
- *      - HTML 파일 추가(＋ › HTML) 이름 'form'   → '박람회_현장점검_양식.html' 전체 붙여넣기
- *      - HTML 파일 추가(＋ › HTML) 이름 'report' → '분석보고서.html' 전체 붙여넣기
- *    ※ 파일명은 반드시 form / report (확장자 .html 자동)
+ * 2) 이 코드를 기본 파일(Code.gs)에 붙여넣기 — 이 파일 하나면 됨.
+ *    ※ 화면(HTML)은 GitHub에서 자동으로 가져와 서빙하므로 form/report HTML 파일은 만들 필요 없음.
+ *    ※ 이후 HTML을 고쳐도 재붙여넣기·재배포 불필요(최대 30초 내 자동 반영, 즉시는 ?refresh=1).
+ *    ※ Code.gs(백엔드)를 바꿀 때만 다시 붙여넣고 "새 버전"으로 재배포하면 됨.
  * 3) 스크립트 속성에 인증키 저장(⚙ 프로젝트 설정 › 스크립트 속성):
  *      - NTS_API_KEY  : 공공데이터포털 Decoding 인증키(사업자 조회용, 없어도 저장은 동작)
  *      - GITHUB_TOKEN : 파인그레인드 PAT, 해당 저장소 Contents=Read/Write(정합성 원장 커밋용)
@@ -58,18 +57,41 @@ var ALLOWED_TYPES = ['예식장','스드메/드메','본식스냅/DVD','예복·
 var HEADERS = ['최종수정','레코드ID','업체명','부스','유형','사업자번호','사업자상태','과세유형',
                '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모'];
 
-/* ── 라우팅 ─────────────────────────────────────────────── */
+/* ── 라우팅 ───────────────────────────────────────────────
+   화면(HTML)은 GitHub에서 실시간으로 가져와 서빙 → HTML 수정 시 재붙여넣기·재배포 불필요.
+   GitHub에 올리면 최대 30초 내 자동 반영(즉시 원하면 URL 끝에 &refresh=1).
+   ※ 브랜치를 기본 브랜치로 병합하면 RAW_BASE 브랜치명도 갱신할 것. */
+var RAW_BASE = 'https://raw.githubusercontent.com/Alfira0526/Sample/claude/handoff-p0-tasks-5ep8hj/';
+
+function serveHtml_(fileName, title, bust) {
+  var out;
+  try {
+    var cache = CacheService.getScriptCache();
+    var key = 'html:' + fileName;
+    var html = bust ? null : cache.get(key);
+    if (!html) {
+      var res = UrlFetchApp.fetch(RAW_BASE + encodeURIComponent(fileName), { muteHttpExceptions: true });
+      if (res.getResponseCode() !== 200) throw new Error('GitHub HTTP ' + res.getResponseCode());
+      html = res.getContentText();
+      try { cache.put(key, html, 30); } catch (ce) { /* 100KB 초과 등 → 캐시 없이 서빙 */ }
+    }
+    out = HtmlService.createHtmlOutput(html);
+  } catch (err) {
+    out = HtmlService.createHtmlOutput(
+      '<div style="font-family:sans-serif;padding:24px;line-height:1.6">화면을 불러오지 못했습니다: ' +
+      err + '<br>잠시 후 새로고침하거나 <b>URL 끝에 <code>?refresh=1</code></b>을 붙여 다시 시도해 주세요.</div>');
+  }
+  return out.setTitle(title).addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.api === 'ping') {
     return ContentService.createTextOutput(JSON.stringify(ping_()))
       .setMimeType(ContentService.MimeType.JSON);
   }
-  var file = (p.page === 'report') ? 'report' : 'form';
-  var title = (file === 'report') ? '박람회 분석·보고서' : '박람회 현장점검';
-  return HtmlService.createHtmlOutputFromFile(file)
-    .setTitle(title)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+  if (p.page === 'report') return serveHtml_('분석보고서.html', '박람회 분석·보고서', p.refresh);
+  return serveHtml_('박람회_현장점검_양식.html', '박람회 현장점검', p.refresh);
 }
 
 /* 정적/파일 호스팅(fetch) 하위호환. GAS 내장 폼은 doPost 대신 api* 함수를 직접 호출함 */
