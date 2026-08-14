@@ -1,6 +1,6 @@
 {
   "schema": "wedding-fair/v1",
-  "updated": "2026-08-14T16:16:47.949Z",
+  "updated": "2026-08-14T16:16:50.852Z",
   "count": 1,
   "venues": [
     {
@@ -9,13 +9,13 @@
       "type": "예식장",
       "biz": "",
       "bstt": "",
-      "booth": "",
+      "booth": "11",
       "hallMinSpend": null,
-      "updated": "2026-08-14T16:16:47.944Z"
+      "updated": "2026-08-14T16:16:50.848Z"
     }
   ],
   "budgetFeed": {
-    "updated": "2026-08-14T16:16:47.949Z",
+    "updated": "2026-08-14T16:16:50.852Z",
     "count": 0,
     "minSpend": null,
     "maxSpend": null,
