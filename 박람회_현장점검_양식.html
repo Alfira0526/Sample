@@ -446,13 +446,27 @@ async function load(){
   restoreChk();
 }
 /* GAS 내장 서빙이면 엔드포인트 설정 불필요 — UI를 그에 맞게 조정하고 보고서 링크를 같은 웹앱으로 연결 */
+/* Apps Script는 폼을 googleusercontent 샌드박스 iframe에서 띄우므로 상대경로 '?page=report'가
+   깨짐. /exec 절대 URL로 새 탭에서 열어야 함. referrer(부모=/exec)로 즉시 잡고, 서버로 보정. */
+function webAppExecUrl(){
+  const m=(document.referrer||'').match(/https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec/);
+  return m?m[0]:'';
+}
+function setReportLinkAbs(url){
+  const rl=$('#reportLink'); if(!rl||!url) return;
+  rl.href=url+'?page=report'; rl.target='_blank'; rl.rel='noopener';
+}
 function initTransportUI(){
   const rl=$('#reportLink');
   if(isGAS()){
     linkBadge(true);
     const lb=$('#linkBadge'); if(lb) lb.textContent='내장 서버';
     const ep=$('#endpoint'); if(ep){ ep.value='(이 웹앱에 내장됨 · 설정 불필요)'; ep.disabled=true; }
-    if(rl) rl.href='?page=report';
+    if(rl){
+      const u=webAppExecUrl();
+      if(u) setReportLinkAbs(u); else { rl.href='?page=report'; rl.target='_blank'; }
+      try{ google.script.run.withSuccessHandler(setReportLinkAbs).withFailureHandler(function(){}).apiWebAppUrl(); }catch(e){}
+    }
     if($('#status') && $('#status').textContent==='자동 저장 준비 중') status('서버 연결됨 · 입력하면 자동 저장·시트 반영');
   }else{
     if(rl) rl.href='분석보고서.html';

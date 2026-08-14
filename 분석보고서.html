@@ -215,8 +215,16 @@ async function loadAll(){
 }
 $('#refresh').onclick=loadAll;
 $('#printBtn').onclick=()=>window.print();
-if(isGAS()){ $('#backLink').href='?'; } // GAS: 폼은 파라미터 없는 같은 웹앱
-window.addEventListener('load',()=>{ if(isGAS()) $('#backLink').href='?'; });
+/* 뒤로가기(입력 폼) 링크도 절대 URL이어야 함(샌드박스 iframe). referrer로 잡고 서버로 보정. */
+function webAppExecUrl(){
+  const m=(document.referrer||'').match(/https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec/);
+  return m?m[0]:'';
+}
+function setBackAbs(url){ const bl=$('#backLink'); if(bl&&url){ bl.href=url; } }
+if(isGAS()){
+  const u=webAppExecUrl(); if(u) setBackAbs(u); else $('#backLink').href='?';
+  try{ google.script.run.withSuccessHandler(setBackAbs).withFailureHandler(function(){}).apiWebAppUrl(); }catch(e){}
+}
 loadAll();
 </script>
 </body>

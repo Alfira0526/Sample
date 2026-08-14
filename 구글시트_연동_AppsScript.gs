@@ -92,6 +92,7 @@ function doPost(e) {
 }
 
 /* ── google.script.run 진입점(GAS 내장 폼·보고서용) ───────── */
+function apiWebAppUrl()   { try { return ScriptApp.getService().getUrl(); } catch (e) { return ''; } }
 function apiPing()        { return ping_(); }
 function apiUpsert(rows)  { return upsert_(rows); }
 function apiSubmit(rows)  { return submit_(rows); }
