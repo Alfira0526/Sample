@@ -53,6 +53,32 @@ body{
   font-size:12px;font-weight:700;border-radius:2px;cursor:pointer;
 }
 
+/* 위험신호 개수 배지 — 요약줄에서 후보 순위 하향을 즉시 인지 */
+.riskb{margin-left:6px;flex:none;font-size:10px;font-weight:800;padding:2px 6px;border-radius:2px;
+  border:1px solid var(--amber);color:var(--amber);background:#fdf6e8;letter-spacing:-.01em}
+.riskb.hi{border-color:var(--seal);color:#fff;background:var(--seal)}
+
+/* 답변 자동확장 textarea */
+textarea.qa{margin-top:6px;min-height:34px;padding:7px 8px;font-size:15px;line-height:1.45;resize:none;overflow:hidden}
+
+/* 카드 삭제 */
+.delcard{width:100%;margin-top:14px;padding:10px;border:1px solid var(--seal);background:transparent;
+  color:var(--seal);font-weight:700;font-size:12.5px;border-radius:2px;cursor:pointer}
+.delcard:active{background:#fbf1f0}
+
+/* 견적 비교 */
+.cmpbtn{width:100%;padding:12px;border:1px solid var(--ink);background:transparent;color:var(--ink);
+  font-weight:700;font-size:13.5px;border-radius:2px;cursor:pointer;margin-bottom:12px}
+.cmpwrap{overflow-x:auto}
+table.cmp{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+table.cmp th,table.cmp td{border:1px solid var(--rule);padding:6px 8px;text-align:right;white-space:nowrap}
+table.cmp th{background:#f7f4ee;font-weight:800;color:var(--ink-2);text-align:right}
+table.cmp td.nm,table.cmp th.nm{text-align:left;white-space:normal;min-width:90px}
+table.cmp tr.best td{background:#f1f7f3}
+table.cmp tr.best td.rk{color:var(--ok);font-weight:800}
+table.cmp .forced{color:var(--seal);font-weight:700}
+.cmpnote{font-size:11.5px;color:var(--ink-2);margin:10px 2px 0;line-height:1.5}
+
 header.masthead{padding:18px 0 12px;border-bottom:2px solid var(--ink)}
 .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);font-weight:700}
 h1{margin:6px 0 4px;font-size:25px;line-height:1.15;letter-spacing:-.03em;font-weight:800}
@@ -213,6 +239,7 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 <h2>업체 기록 <small>부스에서 바로 입력 · 자동 저장</small></h2>
 <div id="cards"></div>
 <button class="addbtn" id="add">＋ 업체 추가</button>
+<button class="cmpbtn" id="compare">예식장 견적 비교 — 동일 보증인원 기준</button>
 
 <h2>절대 하면 안 되는 것</h2>
 <ol class="never">
@@ -245,6 +272,18 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
   <button id="export">기록 내보내기</button>
   <button class="solid" id="addb">업체 추가</button>
 </div>
+
+<dialog id="cmpDlg">
+  <div class="dh">예식장 견적 비교
+    <label style="margin-left:auto;font-weight:600;font-size:12px;display:flex;align-items:center;gap:5px">정규화 인원
+      <select id="cmpN" style="width:auto;padding:5px 6px;font-size:13px">
+        <option>120</option><option selected>130</option><option>150</option><option>200</option>
+      </select>
+    </label>
+    <button style="border-color:var(--ink);color:var(--ink);padding:6px 11px;font-size:12px;margin-left:8px" onclick="document.getElementById('cmpDlg').close()">닫기</button>
+  </div>
+  <div id="cmpBody" style="padding:13px"></div>
+</dialog>
 
 <dialog id="dlg">
   <div class="dh">기록 전문 — 길게 눌러 복사<button id="fmtBtn" style="margin-left:auto;border-color:var(--ink);color:var(--ink);padding:6px 11px;font-size:12px">표 형식</button><button style="border-color:var(--ink);color:var(--ink);padding:6px 11px;font-size:12px;margin-left:6px" onclick="document.getElementById('dlg').close()">닫기</button></div>
@@ -419,18 +458,34 @@ function flat(v){
   return {id:v.id,업체명:v.name,부스:v.booth,유형:v.type,사업자번호:v.biz,사업자상태:v.bstt,과세유형:v.btax,
     대관료만원:v.hall,일인식대:v.meal,보증인원:v.guar,최소지출만원:total,점검답변:ans,위험신호:risk,메모:v.memo};
 }
+/* 시트 전송 재시도 — 지수 백오프(2·4·8·16·32초 상한). 성공 시 초기화.
+   online 이벤트도 push를 호출하므로 예약된 재시도는 중복 실행하지 않도록 단일 타이머로 관리. */
+let retryTimer=null, retryDelay=0;
+function scheduleRetry(){
+  if(retryTimer) return;
+  retryDelay = retryDelay ? Math.min(retryDelay*2, 32000) : 2000;
+  retryTimer=setTimeout(()=>{ retryTimer=null; push(); }, retryDelay);
+}
+function clearRetry(){ retryDelay=0; if(retryTimer){ clearTimeout(retryTimer); retryTimer=null; } }
 async function push(){
   if(!D.ep) return;
   const idx = D.v.map((v,i)=>i).filter(i=>!D.v[i].synced && (D.v[i].name||D.v[i].biz));
-  if(!idx.length) return;
+  if(!idx.length){ clearRetry(); return; }
   try{
     const r = await call('upsert',{rows:idx.map(i=>flat(D.v[i]))});
     if(r && r.ok){
       idx.forEach(markSynced);
+      clearRetry();
       status('시트 저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
       persist();
-    } else { status('시트 응답 오류 — 대기열 유지'); }
-  }catch(e){ status('오프라인 — 기기 저장만 (대기 '+idx.length+'건)'); }
+    } else {
+      scheduleRetry();
+      status('시트 응답 오류 — 대기열 유지 · '+Math.round(retryDelay/1000)+'초 후 재시도');
+    }
+  }catch(e){
+    scheduleRetry();
+    status('오프라인 — 기기 저장만 (대기 '+idx.length+'건 · '+Math.round(retryDelay/1000)+'초 후 재시도)');
+  }
 }
 async function persist(){
   const res = await store.write(JSON.stringify(D));
@@ -444,14 +499,22 @@ async function persist(){
   }
   return res;
 }
+let pendingSave=false, saveBlocked=false;
 function save(){
+  pendingSave=true;
   clearTimeout(t);
   t=setTimeout(async()=>{
-    await persist();
-    status('저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
+    const res=await persist();
+    pendingSave=false;
+    saveBlocked=!(res&&res.ok);
+    if(res&&res.ok) status('저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
     push();
   },800);
 }
+/* 미저장(로컬 저장 대기 중이거나 저장 차단됨) 상태에서 이탈 시 경고 */
+window.addEventListener('beforeunload',e=>{
+  if(pendingSave || saveBlocked){ e.preventDefault(); e.returnValue=''; }
+});
 function uid(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function blank(){return{id:uid(),name:'',booth:'',type:'예식장',biz:'',bstt:'',btax:'',hall:'',meal:'',guar:'120',memo:'',q:{},f:{},synced:false}}
 function qBlock(v,i,list,title){
@@ -460,14 +523,15 @@ function qBlock(v,i,list,title){
   list.map(([k,txt,sub])=>`<div class="q">
     <input type="checkbox" data-v="${i}" data-q="${k}" ${v.q[k]&&v.q[k].on?'checked':''}>
     <div class="qt">${txt}${sub?`<em>${sub}</em>`:''}
-      <input type="text" placeholder="답변 메모" data-v="${i}" data-qa="${k}" value="${v.q[k]?(v.q[k].a||''):''}">
+      <textarea class="qa" rows="1" placeholder="답변 메모" data-v="${i}" data-qa="${k}">${v.q[k]?(v.q[k].a||''):''}</textarea>
     </div></div>`).join('')+`</div>`;
 }
 function render(){
   cards.innerHTML = D.v.map((v,i)=>{
     const spec = specOf(v.type);
+    const rn = FLAGS.filter(([k])=>v.f[k]).length;
     return `<details class="card" ${i===D.v.length-1?'open':''}>
-      <summary><span class="num">${String(i+1).padStart(2,'0')}</span>${v.name||'업체 미입력'}<span class="tag">${v.type}</span><span class="badge ${v.synced?'sync':'wait'}" id="sb${i}">${v.synced?'저장됨':'대기'}</span></summary>
+      <summary><span class="num">${String(i+1).padStart(2,'0')}</span>${v.name||'업체 미입력'}<span class="tag">${v.type}</span><span class="badge ${v.synced?'sync':'wait'}" id="sb${i}">${v.synced?'저장됨':'대기'}</span><span class="riskb ${rn>=3?'hi':''}" id="rk${i}" ${rn?'':'hidden'}>위험 ${rn}</span></summary>
       <div class="body">
         <div class="row">
           <label class="f"><i>업체명</i><input type="text" data-v="${i}" data-f="name" value="${v.name}" placeholder="상호"></label>
@@ -500,10 +564,26 @@ function render(){
           ${FLAGS.map(([k,txt])=>`<div class="q"><input type="checkbox" data-v="${i}" data-fl="${k}" ${v.f[k]?'checked':''}><div class="qt">${txt}</div></div>`).join('')}
         </div>
         <label class="f" style="margin-top:13px"><i>메모</i><textarea data-v="${i}" data-f="memo" placeholder="상담자 이름, 분위기, 특이사항">${v.memo}</textarea></label>
+        <button class="delcard" type="button" data-del="${i}">이 업체 카드 삭제</button>
       </div>
     </details>`;
   }).join('');
   D.v.forEach((v,i)=>calc(i));
+  document.querySelectorAll('textarea.qa').forEach(autoGrow);
+}
+function autoGrow(el){ el.style.height='auto'; el.style.height=(el.scrollHeight)+'px'; }
+function updateRisk(i){
+  const el=document.getElementById('rk'+i); if(!el) return;
+  const n=FLAGS.filter(([k])=>D.v[i].f[k]).length;
+  el.hidden=n===0; el.textContent='위험 '+n; el.className='riskb '+(n>=3?'hi':'');
+}
+function delV(i){
+  const nm=D.v[i].name||'이 업체';
+  if(!confirm('"'+nm+'" 카드를 삭제할까요?\n이 기기 기록에서 제거됩니다. (시트에 이미 저장된 행은 남습니다)')) return;
+  D.v.splice(i,1);
+  if(!D.v.length) D.v=[blank()];
+  render(); save();
+  status('카드 삭제됨');
 }
 function calc(i){
   const el=document.getElementById('calc'+i); if(!el) return;
@@ -532,12 +612,16 @@ document.addEventListener('input',e=>{
     }
   }
   else if(t.dataset.q){ v.q[t.dataset.q]=v.q[t.dataset.q]||{}; v.q[t.dataset.q].on=t.checked; }
-  else if(t.dataset.qa){ v.q[t.dataset.qa]=v.q[t.dataset.qa]||{}; v.q[t.dataset.qa].a=t.value; }
-  else if(t.dataset.fl){ v.f[t.dataset.fl]=t.checked; }
+  else if(t.dataset.qa){ v.q[t.dataset.qa]=v.q[t.dataset.qa]||{}; v.q[t.dataset.qa].a=t.value; autoGrow(t); }
+  else if(t.dataset.fl){ v.f[t.dataset.fl]=t.checked; updateRisk(+i); }
   save();
 });
 function addV(){D.v.push(blank());render();save();window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
 $('#add').onclick=addV; $('#addb').onclick=addV;
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-del]'); if(!b) return;
+  delV(+b.dataset.del);
+});
 
 /* 사업자등록번호 상태조회 (국세청 사업자등록정보 진위확인·상태조회 API를 Apps Script가 중계) */
 function buildTSV(){
@@ -620,6 +704,43 @@ $('#export').onclick=()=>{
   $('#fmtBtn').textContent='표 형식'; $('#fmtBtn').dataset.mode='';
   $('#dlg').showModal();
 };
+
+/* 견적 비교 — 예식장을 동일 보증인원(N)으로 정규화해 최소지출 오름차순 비교.
+   적용인원 = max(N, 업체 최소보증). 최소보증이 N보다 크면 강제 상향(N명으로 못 내림)임을 표시. */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderCompare(){
+  const N=+$('#cmpN').value||130;
+  const halls=D.v.filter(v=>v.type==='예식장' && (+v.meal>0) && (+v.guar>0));
+  const body=$('#cmpBody');
+  if(!halls.length){
+    body.innerHTML='<div style="font-size:13px;color:var(--ink-2);line-height:1.6">비교할 예식장 데이터가 없습니다.<br>예식장 유형 카드에 <b>1인 식대</b>와 <b>보증인원</b>을 입력하면 여기서 자동 비교됩니다.</div>';
+    return;
+  }
+  const rows=halls.map(v=>{
+    const h=+v.hall||0,m=+v.meal||0,g=+v.guar||0,eff=Math.max(N,g);
+    return {name:v.name||'미입력',h,m,g,eff,cost:(h*10000+m*eff)/10000,forced:g>N,
+      risk:FLAGS.filter(([k])=>v.f[k]).length};
+  }).sort((a,b)=>a.cost-b.cost);
+  const won=n=>Math.round(n).toLocaleString('ko-KR');
+  const trs=rows.map((r,idx)=>`<tr class="${idx===0?'best':''}">
+    <td class="rk">${idx+1}</td>
+    <td class="nm">${esc(r.name)}${r.risk?` <span class="forced">⚠${r.risk}</span>`:''}</td>
+    <td>${won(r.h)}</td>
+    <td>${won(r.m)}</td>
+    <td>${r.g}</td>
+    <td class="${r.forced?'forced':''}">${r.eff}${r.forced?'↑':''}</td>
+    <td><b>${won(r.cost)}</b></td>
+  </tr>`).join('');
+  body.innerHTML=`<div class="cmpwrap"><table class="cmp">
+    <thead><tr><th>순위</th><th class="nm">업체</th><th>대관(만)</th><th>1인식대(원)</th><th>최소보증</th><th>적용인원</th><th>${N}명 지출(만원)</th></tr></thead>
+    <tbody>${trs}</tbody></table></div>
+    <div class="cmpnote">· 지출 = 대관료 + 1인식대 × <b>max(${N}, 업체 최소보증)</b>. 부가세·꽃장식·주류·봉사료 별도 여부는 별도 확인.<br>
+    · <b>적용인원 ↑</b> = 해당 업체 최소보증이 ${N}명을 초과해 ${N}명으로 내릴 수 없음(강제 상향).<br>
+    · <span class="forced">⚠숫자</span> = 위험신호 체크 수. 최저가라도 위험신호가 많으면 순위 재검토.</div>`;
+}
+$('#compare').onclick=()=>{ renderCompare(); $('#cmpDlg').showModal(); };
+$('#cmpN').onchange=renderCompare;
+
 load();
 </script>
 </body>
