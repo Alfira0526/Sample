@@ -1,10 +1,21 @@
 {
   "schema": "wedding-fair/v1",
-  "updated": "2026-08-15T03:00:00.000Z",
-  "count": 0,
-  "venues": [],
+  "updated": "2026-08-15T02:56:56.703Z",
+  "count": 1,
+  "venues": [
+    {
+      "id": "rmstqguce0zdxv",
+      "name": "센텀 사이언스파크",
+      "type": "예식장",
+      "biz": "",
+      "bstt": "",
+      "booth": "1",
+      "hallMinSpend": null,
+      "updated": "2026-08-15T02:56:56.701Z"
+    }
+  ],
   "budgetFeed": {
-    "updated": "2026-08-15T03:00:00.000Z",
+    "updated": "2026-08-15T02:56:56.703Z",
     "count": 0,
     "minSpend": null,
     "maxSpend": null,
