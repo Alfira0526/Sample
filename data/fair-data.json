@@ -1,6 +1,6 @@
 {
   "schema": "wedding-fair/v1",
-  "updated": "2026-08-15T03:27:01.616Z",
+  "updated": "2026-08-15T03:27:09.759Z",
   "count": 1,
   "venues": [
     {
@@ -11,11 +11,11 @@
       "bstt": "",
       "booth": "1",
       "hallMinSpend": 466,
-      "updated": "2026-08-15T03:27:01.616Z"
+      "updated": "2026-08-15T03:27:09.757Z"
     }
   ],
   "budgetFeed": {
-    "updated": "2026-08-15T03:27:01.616Z",
+    "updated": "2026-08-15T03:27:09.760Z",
     "count": 1,
     "minSpend": 466,
     "maxSpend": 466,
