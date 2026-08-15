@@ -1,6 +1,6 @@
 {
   "schema": "wedding-fair/v1",
-  "updated": "2026-08-15T02:04:22.762Z",
+  "updated": "2026-08-15T02:04:32.444Z",
   "count": 2,
   "venues": [
     {
@@ -20,15 +20,20 @@
       "biz": "",
       "bstt": "",
       "booth": "1",
-      "hallMinSpend": null,
-      "updated": "2026-08-15T02:04:22.761Z"
+      "hallMinSpend": 620,
+      "updated": "2026-08-15T02:04:32.444Z"
     }
   ],
   "budgetFeed": {
-    "updated": "2026-08-15T02:04:22.763Z",
-    "count": 0,
-    "minSpend": null,
-    "maxSpend": null,
-    "venues": []
+    "updated": "2026-08-15T02:04:32.444Z",
+    "count": 1,
+    "minSpend": 620,
+    "maxSpend": 620,
+    "venues": [
+      {
+        "name": "샘플",
+        "spend": 620
+      }
+    ]
   }
 }
