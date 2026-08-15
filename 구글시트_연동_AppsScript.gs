@@ -55,7 +55,8 @@ var GITHUB_PATH   = 'data/fair-data.json';
 var ALLOWED_TYPES = ['예식장','스드메/드메','본식스냅/DVD','예복·한복·예물','신혼여행','기타'];
 
 var HEADERS = ['최종수정','레코드ID','업체명','부스','유형','사업자번호','사업자상태','과세유형',
-               '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모'];
+               '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모',
+               '종합인상','계약압박','재접촉','현장관찰'];
 
 /* ── 라우팅 ───────────────────────────────────────────────
    화면(HTML)은 GitHub에서 실시간으로 가져와 서빙 → HTML 수정 시 재붙여넣기·재배포 불필요.
@@ -147,11 +148,21 @@ function sheet_() {
       sh.setFrozenRows(1);
       sh.setColumnWidth(13, 420);   // 점검답변
       sh.setColumnWidth(15, 260);   // 메모
+      sh.setColumnWidth(19, 300);   // 현장관찰
     } catch (e) {
       // 동시 호출(예: 보고서의 stats+rows 병렬)이 같은 시트를 만들려는 경쟁 → 이미 생성된 것 사용
       sh = ss.getSheetByName(SHEET_NAME);
       if (!sh) throw e;
     }
+  } else {
+    // 기존 시트에 관찰 컬럼(종합인상·계약압박·재접촉·현장관찰)이 없으면 헤더를 확장·동기화
+    try {
+      var cur = sh.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+      if (String(cur[HEADERS.length - 1] || '') !== HEADERS[HEADERS.length - 1]) {
+        sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
+          .setFontWeight('bold').setBackground('#12161c').setFontColor('#ffffff');
+      }
+    } catch (e2) { /* 헤더 동기화 실패는 저장 자체를 막지 않음 */ }
   }
   return sh;
 }
@@ -186,7 +197,8 @@ function upsert_(rows) {
     var line = [now, v.id || '', v['업체명'] || '', v['부스'] || '', v['유형'] || '',
                 v['사업자번호'] || '', v['사업자상태'] || '', v['과세유형'] || '',
                 v['대관료만원'] || '', v['일인식대'] || '', v['보증인원'] || '',
-                v['최소지출만원'] || '', v['점검답변'] || '', v['위험신호'] || '', v['메모'] || ''];
+                v['최소지출만원'] || '', v['점검답변'] || '', v['위험신호'] || '', v['메모'] || '',
+                v['종합인상'] || '', v['계약압박'] || '', v['재접촉'] || '', v['현장관찰'] || ''];
 
     var target = (v.id && byId[v.id]) || (bno2.length === 10 && byBno[bno2]) || 0;
     if (target) {
@@ -268,6 +280,7 @@ function getStats_() {
     ok: true, total: 0, byType: {}, halls: [], hallSummary: null,
     risk: { total: 0, withAny: 0, with3: 0 },
     verify: { '계속': 0, '휴업': 0, '폐업': 0, '기타': 0, '미확인': 0 },
+    obs: { starSum: 0, starCount: 0, pressStrong: 0, nextTour: 0, nextDrop: 0, avgStar: null },
     generatedAt: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'),
     sheet: sh.getParent().getName()
   };
@@ -297,7 +310,17 @@ function getStats_() {
     else if (st.indexOf('휴업') >= 0) stats.verify['휴업']++;
     else if (st.indexOf('폐업') >= 0) stats.verify['폐업']++;
     else stats.verify['기타']++;
+
+    // 현장 관찰 집계(컬럼: 종합인상=15, 계약압박=16, 재접촉=17)
+    var starTxt = String(r[15] || ''), starN = parseInt(starTxt, 10);
+    if (!isNaN(starN) && starN > 0) { stats.obs.starSum += starN; stats.obs.starCount++; }
+    var press = String(r[16] || '');
+    if (press.indexOf('강함') >= 0) stats.obs.pressStrong++; // '강함'·'매우 강함'
+    var nxt = String(r[17] || '');
+    if (nxt.indexOf('투어') >= 0) stats.obs.nextTour++;
+    else if (nxt.indexOf('제외') >= 0) stats.obs.nextDrop++;
   }
+  if (stats.obs.starCount) stats.obs.avgStar = Math.round(stats.obs.starSum / stats.obs.starCount * 10) / 10;
   var spends = stats.halls.map(function (h) { return h.minSpend; });
   if (spends.length) {
     var sum = spends.reduce(function (a, b) { return a + b; }, 0);

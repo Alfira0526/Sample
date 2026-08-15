@@ -154,6 +154,41 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--ink);outline-off
 
 .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 6px;border:1px solid var(--rule);color:var(--ink-2);margin-left:6px;vertical-align:2px}
 
+/* VAT 미확인 경고 — 최소지출 값이 세전일 수 있음을 계산 박스 안에 병기 */
+.calc .vatw{font-size:12px;margin-top:7px;padding:7px 8px;background:rgba(168,106,18,.22);border-left:3px solid var(--amber);line-height:1.45;color:#ffe6bd}
+.calc .vatw b{opacity:1;font-size:12px;display:inline;margin:0;letter-spacing:0;color:#fff}
+.calc .vatw.ok{background:rgba(44,92,70,.3);border-left-color:var(--ok);color:#b9e2ce}
+.calc .vatw:empty{display:none}
+
+/* 글로벌 학습 진도 — 시장 관행을 배우는 문항의 누적 진도 */
+.prog{background:#fff;border:1px solid var(--rule);border-left:4px solid var(--ink);padding:11px 13px;margin-bottom:12px}
+.prog .progt{font-size:12.5px;font-weight:700;display:flex;align-items:baseline;gap:6px}
+.prog .progt b{font-variant-numeric:tabular-nums;font-size:15px}
+.prog .progbar{height:7px;background:var(--paper);border:1px solid var(--rule);margin:7px 0 5px;overflow:hidden}
+.prog .progbar i{display:block;height:100%;background:var(--ink);transition:width .3s}
+.prog .progn{font-size:11px;color:var(--ink-2);line-height:1.45}
+
+/* 문항 태깅 · 위험멘트 원터치 */
+.q .qtx{font-weight:600}
+.gl{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.03em;padding:1px 5px;border:1px solid var(--ink);color:var(--ink);vertical-align:1px;margin-left:3px}
+.lrn{display:inline-block;font-size:9.5px;font-weight:800;padding:1px 5px;background:var(--ok);color:#fff;vertical-align:1px;margin-left:3px}
+.saidb{display:inline-flex;align-items:center;margin-top:6px;padding:4px 9px;font-size:11.5px;font-weight:700;
+  border:1px solid var(--seal);background:transparent;color:var(--seal);border-radius:2px;cursor:pointer}
+.saidb.on{background:var(--seal);color:#fff}
+
+/* 구조화된 현장 관찰 — 분위기·태도를 눈금으로 기록 */
+.obs{background:#f7f4ee;border:1px solid var(--rule);padding:11px 12px;margin-top:12px}
+.obs>b{display:block;font-size:11.5px;letter-spacing:.05em;color:var(--ink-2);margin-bottom:9px;font-weight:800}
+.obsg{margin-bottom:10px}
+.obsg:last-child{margin-bottom:0}
+.obsg>i{display:block;font-style:normal;font-size:11.5px;color:var(--ink-2);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:5px}
+.segb{padding:6px 10px;font-size:12px;font-weight:600;border:1px solid var(--rule);background:#fff;color:var(--ink-2);border-radius:2px;cursor:pointer}
+.segb.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stars{display:flex;gap:3px}
+.starb{font-size:20px;line-height:1;padding:2px 3px;border:0;background:transparent;color:var(--rule);cursor:pointer}
+.starb.on{color:var(--amber)}
+
 ol.never{counter-reset:n;list-style:none;padding:0;margin:0;border-top:1px solid var(--ink)}
 ol.never li{
   counter-increment:n;display:flex;gap:11px;padding:11px 2px;border-bottom:1px solid var(--rule);font-size:13.5px;line-height:1.45;
@@ -308,17 +343,12 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
 </dialog>
 
 <script>
-/* 진단용 오류 표시기 — 별도 스크립트 블록. 아래 메인 스크립트가 파싱 오류여도
-   이 핸들러는 먼저 등록되므로, 오류 메시지·줄번호를 상태표시줄에 띄울 수 있음. 원인 파악 후 제거. */
+/* 전역 오류 최소 안전망 — 상태표시줄에 노출 */
 window.addEventListener('error', function(ev){
-  try{
-    var s=document.getElementById('status');
-    if(s){ s.textContent='⚠ '+((ev&&ev.message)||'unknown')+' | 마지막통과블록 b='+(window.__b||0)+' → b'+((window.__b||0)+1)+' 구간 문제'; s.style.color='#ffb3ab'; }
-  }catch(e){}
+  try{ var s=document.getElementById('status'); if(s){ s.textContent='⚠ 오류: '+((ev&&ev.message)||'unknown'); s.style.color='#ffb3ab'; } }catch(e){}
 });
 </script>
 <script>
-window.__b=1;
 const COMMON = [
   ["c1","견적서를 서면으로 주실 수 있습니까? 유효기간이 며칠입니까?","전 항목 명시 요구 · 위험: 구두로만 안내"],
   ["c2","이 금액에 부가세가 포함된 금액입니까?","VAT 별도면 총액 10% 상승 · 위험: \"보통 별도예요\""],
@@ -387,9 +417,26 @@ const FLAGS = [
   ["f7","계약금 환불 불가라고 안내했다"]
 ];
 
-</script>
-<script>
-window.__b=2;
+/* 글로벌 문항 = 업체가 아니라 '시장 관행'을 배우는 질문. 한 곳에서 답을 얻으면
+   다른 곳에선 재확인만 하면 됨. 나머지는 업체별로 매번 확인이 필요한 문항. */
+const GLOBAL = ['c2','c3','c4','c5','h1','h4','h6','h11','s1','s2','s3','s7','p1','p2','p4','y1','y3','y4','t1','t2'];
+function isGlobal(k){ return GLOBAL.indexOf(k)>=0; }
+/* 문항 부연설명(sub)에 적힌 '위험: …' 문구를 추출 — 별도 하드코딩 없이 단일 출처 유지 */
+function riskHint(sub){
+  if(!sub) return '';
+  var idx=String(sub).indexOf('위험:');
+  return idx<0 ? '' : String(sub).slice(idx+3).trim();
+}
+/* 구조화된 현장 관찰 항목 — 분위기·태도를 눈금으로 기록(정량 순위가 아니라 감·학습용) */
+const OBS = [
+  ['att','상담 태도',['즉답','일부 회피','질문 전환','역질문·압박']],
+  ['press','계약 압박',['없음','약함','강함','매우 강함']],
+  ['docs','자료 완비',['서면 즉시','구두만','자료 없음']],
+  ['exp','상담사',['신입 느낌','보통','숙련','미확인']],
+  ['busy','부스 분위기',['한산','보통','대기 많음']],
+  ['next','재접촉',['투어 예약','보류','제외']]
+];
+
 let D = {v:[],chk:{}};
 const $ = s=>document.querySelector(s);
 const cards = $('#cards');
@@ -453,7 +500,7 @@ async function load(){
   catch(e){ status('저장된 데이터 형식 오류 — 새로 시작'); }
   if(!D.v || !D.v.length) D.v=[blank()];
   if(!D.chk) D.chk={};
-  D.v.forEach(v=>{ if(!v.id) v.id=uid(); if(v.synced===undefined) v.synced=false; if(!Array.isArray(v.photos)) v.photos=[]; });
+  D.v.forEach(v=>{ if(!v.id) v.id=uid(); if(v.synced===undefined) v.synced=false; if(!Array.isArray(v.photos)) v.photos=[]; if(!v.obs) v.obs={}; if(!v.said) v.said={}; });
   if(D.ep){ $('#endpoint').value=D.ep; linkBadge(true); }
   initTransportUI();
   render();
@@ -535,17 +582,19 @@ function call(action,payload){
   return fetch(D.ep,{method:'POST',body:JSON.stringify({action,...payload})})
     .then(res=>{ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); });
 }
-</script>
-<script>
-window.__b=3;
 function flat(v){
   const spec = specOf(v.type);
   const ans=[...COMMON,...spec].filter(([k])=>v.q[k]&&(v.q[k].on||v.q[k].a))
     .map(([k,txt])=>`${v.q[k].on?'✔':'·'} ${txt}${v.q[k].a?' → '+v.q[k].a:''}`).join(' | ');
-  const risk=FLAGS.filter(([k])=>v.f[k]).map(([,t])=>t).join(' / ');
+  const flagRisk=FLAGS.filter(([k])=>v.f[k]).map(([,t])=>t);
+  const saidRisk=[...COMMON,...spec].filter(([k])=>v.said&&v.said[k]).map(([k,txt,sub])=>'멘트: '+(riskHint(sub)||txt));
+  const risk=[...flagRisk,...saidRisk].join(' / ');
   const total=(v.type==='예식장'&&v.meal&&v.guar)?((+v.hall||0)*10000+(+v.meal)*(+v.guar))/10000:'';
+  const o=v.obs||{};
+  const obsText=OBS.filter(([key])=>o[key]).map(([key,label])=>label+':'+o[key]).join(' · ');
   return {id:v.id,업체명:v.name,부스:v.booth,유형:v.type,사업자번호:v.biz,사업자상태:v.bstt,과세유형:v.btax,
-    대관료만원:v.hall,일인식대:v.meal,보증인원:v.guar,최소지출만원:total,점검답변:ans,위험신호:risk,메모:v.memo};
+    대관료만원:v.hall,일인식대:v.meal,보증인원:v.guar,최소지출만원:total,점검답변:ans,위험신호:risk,메모:v.memo,
+    종합인상:o.star?o.star+'★':'', 계약압박:o.press||'', 재접촉:o.next||'', 현장관찰:obsText};
 }
 /* 시트 전송 재시도 — 지수 백오프(2·4·8·16·32초 상한). 성공 시 초기화.
    online 이벤트도 push를 호출하므로 예약된 재시도는 중복 실행하지 않도록 단일 타이머로 관리. */
@@ -623,23 +672,53 @@ window.addEventListener('beforeunload',e=>{
   if(pendingSave || saveBlocked){ e.preventDefault(); e.returnValue=''; }
 });
 function uid(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function blank(){return{id:uid(),name:'',booth:'',type:'예식장',biz:'',bstt:'',btax:'',hall:'',meal:'',guar:'120',memo:'',q:{},f:{},photos:[],synced:false}}
-function qBlock(v,i,list,title){
+function blank(){return{id:uid(),name:'',booth:'',type:'예식장',biz:'',bstt:'',btax:'',hall:'',meal:'',guar:'120',memo:'',q:{},f:{},obs:{},said:{},photos:[],synced:false}}
+function qBlock(v,i,list,title,gLearned){
   if(!list.length) return '';
+  gLearned=gLearned||{};
   return `<div style="margin-top:14px"><div style="font-size:11.5px;font-weight:800;color:var(--ink-2);letter-spacing:.05em;margin-bottom:4px">${title}</div>`+
-  list.map(([k,txt,sub])=>`<div class="q">
+  list.map(([k,txt,sub])=>{
+    const g=isGlobal(k);
+    const learnedElsewhere = g && gLearned[k] && gLearned[k]!==v.id;
+    const hint=riskHint(sub);
+    const said=v.said&&v.said[k];
+    return `<div class="q">
     <input type="checkbox" data-v="${i}" data-q="${k}" ${v.q[k]&&v.q[k].on?'checked':''}>
-    <div class="qt">${txt}${sub?`<em>${sub}</em>`:''}
+    <div class="qt">
+      <div class="qtx">${txt}${g?' <span class="gl">글로벌</span>':''}${learnedElsewhere?' <span class="lrn">✓ 다른 곳 학습</span>':''}</div>
+      ${sub?`<em>${sub}</em>`:''}
       <textarea class="qa" rows="1" placeholder="답변 메모" data-v="${i}" data-qa="${k}">${v.q[k]?(v.q[k].a||''):''}</textarea>
-    </div></div>`).join('')+`</div>`;
+      ${hint?`<button type="button" class="saidb ${said?'on':''}" data-said="${i}|${k}" title="${esc(hint)}">${said?'⚠ 위험 멘트 나옴 ✓':'⚠ 이 멘트 나옴'}</button>`:''}
+    </div></div>`;
+  }).join('')+`</div>`;
 }
-</script>
-<script>
-window.__b=4;
+/* 현장 관찰 블록 — 눈금 버튼 그룹 + 종합인상 별점 */
+function obsBlock(v,i){
+  const o=v.obs||{};
+  const groups=OBS.map(([key,label,opts])=>`<div class="obsg"><i>${label}</i><div class="seg">`+
+    opts.map(opt=>`<button type="button" class="segb ${o[key]===opt?'on':''}" data-obs="${i}|${key}|${esc(opt)}">${opt}</button>`).join('')+
+    `</div></div>`).join('');
+  const stars=[1,2,3,4,5].map(n=>`<button type="button" class="starb ${(+o.star>=n)?'on':''}" data-star="${i}|${n}" aria-label="${n}점">★</button>`).join('');
+  return `<div class="obs"><b>현장 관찰 — 분위기·태도 (감·학습용, 순위 아님)</b>
+    ${groups}
+    <div class="obsg"><i>종합 인상</i><div class="stars">${stars}</div></div>
+  </div>`;
+}
+function qLearned(v,k){ return !!(v.q[k] && (v.q[k].on || (v.q[k].a && v.q[k].a.trim()))); }
 function render(){
-  cards.innerHTML = D.v.map((v,i)=>{
+  // 글로벌 문항 학습 현황 — 어느 업체에서든 답을 얻은 글로벌 문항을 집계
+  const gLearned={};
+  GLOBAL.forEach(k=>{ for(const vv of D.v){ if(qLearned(vv,k)){ gLearned[k]=vv.id; break; } } });
+  const gCount=Object.keys(gLearned).length, gPct=Math.round(gCount/GLOBAL.length*100);
+  const prog=`<div class="prog">
+    <div class="progt">글로벌 문항 학습 진도 <b>${gCount}/${GLOBAL.length}</b></div>
+    <div class="progbar"><i style="width:${gPct}%"></i></div>
+    <div class="progn">‘글로벌’ 문항은 업체가 아니라 시장 관행을 배우는 질문 — 한 곳에서 답을 얻으면 다른 곳에선 확인만 하면 됩니다.</div>
+  </div>`;
+  cards.innerHTML = prog + D.v.map((v,i)=>{
     const spec = specOf(v.type);
-    const rn = FLAGS.filter(([k])=>v.f[k]).length;
+    const saidN = Object.keys(v.said||{}).filter(k=>v.said[k]).length;
+    const rn = FLAGS.filter(([k])=>v.f[k]).length + saidN;
     return `<details class="card" ${i===D.v.length-1?'open':''}>
       <summary><span class="num">${String(i+1).padStart(2,'0')}</span>${v.name||'업체 미입력'}<span class="tag">${v.type}</span><span class="badge ${v.synced?'sync':'wait'}" id="sb${i}">${v.synced?'저장됨':'대기'}</span><span class="riskb ${rn>=3?'hi':''}" id="rk${i}" ${rn?'':'hidden'}>위험 ${rn}</span></summary>
       <div class="body">
@@ -667,9 +746,11 @@ function render(){
           <b>보증인원 기준 최소 지출</b>
           <div class="out" id="calc${i}">—</div>
           <div class="note">대관료 + (1인 식대 × 보증인원). 부가세·꽃장식·주류 별도 여부 반드시 확인.</div>
+          <div class="vatw" id="vatw${i}"></div>
         </div>`:''}
-        ${qBlock(v,i,COMMON,'공통 확인')}
-        ${qBlock(v,i,spec,v.type+' 확인')}
+        ${qBlock(v,i,COMMON,'공통 확인',gLearned)}
+        ${qBlock(v,i,spec,v.type+' 확인',gLearned)}
+        ${obsBlock(v,i)}
         <div class="flag"><b>위험 신호 — 하나라도 체크되면 후보 순위 하향</b>
           ${FLAGS.map(([k,txt])=>`<div class="q"><input type="checkbox" data-v="${i}" data-fl="${k}" ${v.f[k]?'checked':''}><div class="qt">${txt}</div></div>`).join('')}
         </div>
@@ -720,7 +801,8 @@ function addPhoto(i,file){
 }
 function updateRisk(i){
   const el=document.getElementById('rk'+i); if(!el) return;
-  const n=FLAGS.filter(([k])=>D.v[i].f[k]).length;
+  const v=D.v[i];
+  const n=FLAGS.filter(([k])=>v.f[k]).length + Object.keys(v.said||{}).filter(k=>v.said[k]).length;
   el.hidden=n===0; el.textContent='위험 '+n; el.className='riskb '+(n>=3?'hi':'');
 }
 function delV(i){
@@ -734,16 +816,20 @@ function delV(i){
 function calc(i){
   const el=document.getElementById('calc'+i); if(!el) return;
   const v=D.v[i], h=+v.hall||0, m=+v.meal||0, g=+v.guar||0;
-  if(!m||!g){el.textContent='—';return}
+  const w=document.getElementById('vatw'+i);
+  if(!m||!g){el.textContent='—'; if(w){w.className='vatw';w.textContent='';} return}
   const total = h*10000 + m*g;
   el.textContent = (total/10000).toLocaleString('ko-KR',{maximumFractionDigits:0})+'만원';
+  if(w){
+    const man=n=>Math.round(n/10000).toLocaleString('ko-KR');
+    if(v.q.c2 && v.q.c2.on){ w.className='vatw ok'; w.textContent='✓ 부가세 포함 확인됨(c2). 위 값은 세금 포함 기준.'; }
+    else{ w.className='vatw';
+      w.innerHTML='⚠ 부가세 미확인 — VAT 별도면 약 <b>'+man(total*1.1)+'만원(+10%)</b>, 봉사료까지 더하면 약 <b>'+man(total*1.2)+'만원</b>일 수 있음. 위 값은 세전일 가능성. c2 문항으로 확인하세요.'; }
+  }
 }
 function restoreChk(){
   document.querySelectorAll('[data-k]').forEach(c=>{c.checked=!!D.chk[c.dataset.k]});
 }
-</script>
-<script>
-window.__b=5;
 document.addEventListener('input',e=>{
   const t=e.target, i=t.dataset.v;
   if(t.id==='endpoint'){D.ep=t.value.trim();linkBadge(!!D.ep);save();return}
@@ -760,11 +846,19 @@ document.addEventListener('input',e=>{
       s.childNodes[1].textContent = t.value||'업체 미입력';
     }
   }
-  else if(t.dataset.q){ v.q[t.dataset.q]=v.q[t.dataset.q]||{}; v.q[t.dataset.q].on=t.checked; }
-  else if(t.dataset.qa){ v.q[t.dataset.qa]=v.q[t.dataset.qa]||{}; v.q[t.dataset.qa].a=t.value; autoGrow(t); }
+  else if(t.dataset.q){ const k=t.dataset.q; v.q[k]=v.q[k]||{}; v.q[k].on=t.checked; if(k==='c2')calc(+i); if(isGlobal(k))updateProg(); }
+  else if(t.dataset.qa){ const k=t.dataset.qa; v.q[k]=v.q[k]||{}; v.q[k].a=t.value; autoGrow(t); if(isGlobal(k))updateProg(); }
   else if(t.dataset.fl){ v.f[t.dataset.fl]=t.checked; updateRisk(+i); }
   save();
 });
+/* 글로벌 학습 진도 바만 가볍게 갱신(전체 render 없이 — 입력 포커스 유지) */
+function updateProg(){
+  const gLearned={};
+  GLOBAL.forEach(k=>{ for(const vv of D.v){ if(qLearned(vv,k)){ gLearned[k]=vv.id; break; } } });
+  const gCount=Object.keys(gLearned).length, gPct=Math.round(gCount/GLOBAL.length*100);
+  const b=document.querySelector('.prog .progt b'); if(b) b.textContent=gCount+'/'+GLOBAL.length;
+  const bar=document.querySelector('.prog .progbar i'); if(bar) bar.style.width=gPct+'%';
+}
 function addV(){D.v.push(blank());render();save();window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
 $('#add').onclick=addV; $('#addb').onclick=addV;
 document.addEventListener('click',e=>{
@@ -774,6 +868,37 @@ document.addEventListener('click',e=>{
   if(dph){
     const [i,pi]=dph.dataset.delph.split(':').map(Number);
     if(D.v[i]&&D.v[i].photos){ D.v[i].photos.splice(pi,1); renderPhotos(i); markUnsynced(i); save(); }
+    return;
+  }
+  // 현장 관찰 — 눈금 버튼(토글: 같은 값 재클릭 시 해제)
+  const ob=e.target.closest('[data-obs]');
+  if(ob){
+    const [i,key,opt]=ob.dataset.obs.split('|'); const v=D.v[+i];
+    v.obs=v.obs||{};
+    const wasOn=v.obs[key]===opt;
+    v.obs[key]=wasOn?'':opt;
+    const seg=ob.closest('.seg'); if(seg) seg.querySelectorAll('.segb').forEach(x=>x.classList.remove('on'));
+    if(!wasOn) ob.classList.add('on');
+    markUnsynced(+i); save(); return;
+  }
+  // 종합 인상 별점(토글: 같은 별 재클릭 시 해제)
+  const st=e.target.closest('[data-star]');
+  if(st){
+    const [i,n]=st.dataset.star.split('|').map(Number); const v=D.v[+i];
+    v.obs=v.obs||{};
+    const nv=(+v.obs.star===n)?0:n;
+    v.obs.star=nv;
+    const box=st.closest('.stars'); if(box){ const arr=[...box.querySelectorAll('.starb')]; arr.forEach((x,idx)=>x.classList.toggle('on',idx<nv)); }
+    markUnsynced(+i); save(); return;
+  }
+  // 위험 멘트 원터치 — 해당 문항에서 위험 멘트가 나왔는지 기록(위험신호에 합산)
+  const sd=e.target.closest('[data-said]');
+  if(sd){
+    const [i,k]=sd.dataset.said.split('|'); const v=D.v[+i];
+    v.said=v.said||{};
+    const on=!v.said[k]; v.said[k]=on;
+    sd.classList.toggle('on',on); sd.textContent=on?'⚠ 위험 멘트 나옴 ✓':'⚠ 이 멘트 나옴';
+    markUnsynced(+i); updateRisk(+i); save(); return;
   }
 });
 document.addEventListener('change',e=>{
@@ -786,14 +911,16 @@ document.addEventListener('change',e=>{
 /* 사업자등록번호 상태조회 (국세청 사업자등록정보 진위확인·상태조회 API를 Apps Script가 중계) */
 function buildTSV(){
   const head=['최종수정','레코드ID','업체명','부스','유형','사업자번호','사업자상태','과세유형',
-    '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모'];
+    '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모',
+    '종합인상','계약압박','재접촉','현장관찰'];
   const now=new Date().toLocaleString('ko-KR');
   const clean=s=>String(s==null?'':s).split('\t').join(' ').split('\n').join(' ').split('\r').join(' ');
   const lines=[head.join('\t')];
   D.v.filter(v=>v.name||v.biz).forEach(v=>{
     const f=flat(v);
     lines.push([now,f.id,f['업체명'],f['부스'],f['유형'],f['사업자번호'],f['사업자상태'],f['과세유형'],
-      f['대관료만원'],f['일인식대'],f['보증인원'],f['최소지출만원'],f['점검답변'],f['위험신호'],f['메모']]
+      f['대관료만원'],f['일인식대'],f['보증인원'],f['최소지출만원'],f['점검답변'],f['위험신호'],f['메모'],
+      f['종합인상'],f['계약압박'],f['재접촉'],f['현장관찰']]
       .map(clean).join('\t'));
   });
   return lines.join('\n');
@@ -838,25 +965,29 @@ $('#syncNow').onclick=async()=>{
 };
 window.addEventListener('online',()=>push());
 
-</script>
-<script>
-window.__b=6;
 $('#export').onclick=()=>{
   const L=['부산 웨딩박람회 현장 기록 · 2026-08-15','목적: 시장조사(계약 없음) · 상견례 근거자료','—'.repeat(20)];
   D.v.forEach((v,i)=>{
     L.push('',`[${i+1}] ${v.name||'미입력'} (${v.type}) 부스 ${v.booth||'-'}`);
     if(v.biz) L.push(`  사업자번호 ${v.biz}${v.bstt?`  → ${v.bstt}${v.btax?' / '+v.btax:''}`:'  → 조회 필요'}`);
     if(v.type==='예식장'&&v.meal&&v.guar){
+      const tot=((+v.hall||0)*10000+(+v.meal)*(+v.guar))/10000;
       L.push(`  대관 ${v.hall||0}만 / 1인식대 ${(+v.meal).toLocaleString()}원 / 보증 ${v.guar}명`);
-      L.push(`  최소지출 ${(((+v.hall||0)*10000+(+v.meal)*(+v.guar))/10000).toLocaleString()}만원`);
+      L.push(`  최소지출 ${tot.toLocaleString()}만원${(v.q.c2&&v.q.c2.on)?' (부가세 포함 확인)':` (부가세 미확인 — VAT 별도 시 ~${Math.round(tot*1.1).toLocaleString()}만원)`}`);
     }
     const spec = specOf(v.type);
     [...COMMON,...spec].forEach(([k,txt])=>{
       const a=v.q[k];
       if(a&&(a.on||a.a)) L.push(`  ${a.on?'✔':'·'} ${txt}${a.a?` → ${a.a}`:''}`);
     });
-    const fl=FLAGS.filter(([k])=>v.f[k]).map(([,t])=>t);
-    if(fl.length) L.push('  ⚠ 위험신호: '+fl.join(' / '));
+    const o=v.obs||{};
+    const obsText=OBS.filter(([key])=>o[key]).map(([key,label])=>label+' '+o[key]).join(' · ');
+    if(o.star) L.push('  종합인상: '+'★'.repeat(+o.star)+`(${o.star})`);
+    if(obsText) L.push('  현장관찰: '+obsText);
+    const flagList=FLAGS.filter(([k])=>v.f[k]).map(([,t])=>t);
+    const saidList=[...COMMON,...spec].filter(([k])=>v.said&&v.said[k]).map(([k,txt,sub])=>'멘트 "'+(riskHint(sub)||txt)+'"');
+    const allRisk=[...flagList,...saidList];
+    if(allRisk.length) L.push('  ⚠ 위험신호: '+allRisk.join(' / '));
     if(v.photos&&v.photos.length) L.push('  견적서 사진: '+v.photos.length+'장 (앱 내 보관)');
     if(v.memo) L.push('  메모: '+v.memo);
   });
@@ -937,13 +1068,8 @@ function renderCompare(){
 }
 $('#compare').onclick=()=>{ renderCompare(); $('#cmpDlg').showModal(); };
 $('#cmpN').onchange=renderCompare;
-</script>
-<script>
-window.__b=7;
+
 load();
-/* 진단 breadcrumb: 스크립트 끝까지 도달하면 표시(오류·CSP 여부 구분용). 원인 파악 후 제거. */
-window.__jsAlive='script-end';
-try{ var _s=document.getElementById('status'); if(_s && _s.textContent==='자동 저장 준비 중') _s.textContent='JS 실행됨 · google='+(typeof google)+' · run='+(typeof google!=='undefined'&&google.script?typeof google.script.run:'no'); }catch(e){}
 </script>
 </body>
 </html>

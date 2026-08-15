@@ -169,6 +169,20 @@ function renderStats(stats, rows){
     <div class="note">위험신호 1개 이상: <b>${risk.withAny||0}곳</b> · 3개 이상(후보 하향 권고): <b style="color:var(--seal)">${risk.with3||0}곳</b> / 전체 ${stats.total}곳</div>
   </div>`;
 
+  // 현장 관찰 요약 — 분위기·태도(정량 순위 아님)
+  const ob=stats.obs;
+  if(ob && (ob.starCount || ob.pressStrong || ob.nextTour || ob.nextDrop)){
+    html+=`<h2>현장 관찰 요약 <span class="tag">분위기·태도</span></h2><div class="panel">
+      <div class="note" style="margin-top:0">정량 순위가 아니라 상담 분위기·태도의 감을 잡기 위한 지표입니다.</div>
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi"><b>평균 인상</b><div class="v">${ob.avgStar!=null?ob.avgStar:'–'}<span class="u">★</span></div></div>
+        <div class="kpi seal"><b>강한 계약압박</b><div class="v">${ob.pressStrong||0}<span class="u">곳</span></div></div>
+        <div class="kpi ok"><b>투어 예약</b><div class="v">${ob.nextTour||0}<span class="u">곳</span></div></div>
+        <div class="kpi"><b>후보 제외</b><div class="v">${ob.nextDrop||0}<span class="u">곳</span></div></div>
+      </div>
+    </div>`;
+  }
+
   // 사업자 검증 현황
   html+=`<h2>사업자등록 검증 현황</h2><div class="panel">
     <div class="tblwrap"><table><thead><tr><th class="nm">상태</th><th>업체 수</th></tr></thead><tbody>
