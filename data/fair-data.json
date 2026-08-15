@@ -1,6 +1,6 @@
 {
   "schema": "wedding-fair/v1",
-  "updated": "2026-08-15T02:56:59.643Z",
+  "updated": "2026-08-15T02:57:03.942Z",
   "count": 1,
   "venues": [
     {
@@ -10,15 +10,20 @@
       "biz": "",
       "bstt": "",
       "booth": "1",
-      "hallMinSpend": null,
-      "updated": "2026-08-15T02:56:59.640Z"
+      "hallMinSpend": 466,
+      "updated": "2026-08-15T02:57:03.940Z"
     }
   ],
   "budgetFeed": {
-    "updated": "2026-08-15T02:56:59.643Z",
-    "count": 0,
-    "minSpend": null,
-    "maxSpend": null,
-    "venues": []
+    "updated": "2026-08-15T02:57:03.942Z",
+    "count": 1,
+    "minSpend": 466,
+    "maxSpend": 466,
+    "venues": [
+      {
+        "name": "센텀 사이언스파크",
+        "spend": 466
+      }
+    ]
   }
 }
