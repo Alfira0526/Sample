@@ -58,6 +58,19 @@ var HEADERS = ['최종수정','레코드ID','업체명','부스','유형','사�
                '대관료(만원)','1인식대(원)','보증인원','최소지출(만원)','점검답변','위험신호','메모',
                '종합인상','계약압박','재접촉','현장관찰'];
 
+/* 정규식 리터럴 미사용 유틸 — 붙여넣기·구버전 파서에서 '/'가 정규식으로 오인돼
+   "Invalid regular expression: missing /" 구문 오류가 나는 것을 원천 차단. */
+function digitsOnly_(s) {
+  s = String(s == null ? '' : s);
+  var out = '';
+  for (var i = 0; i < s.length; i++) { var ch = s.charAt(i); if (ch >= '0' && ch <= '9') out += ch; }
+  return out;
+}
+function stripWs_(s) {
+  s = String(s == null ? '' : s);
+  return s.split(' ').join('').split('\t').join('').split('\n').join('').split('\r').join('');
+}
+
 /* ── 라우팅 ───────────────────────────────────────────────
    화면(HTML)은 GitHub에서 실시간으로 가져와 서빙 → HTML 수정 시 재붙여넣기·재배포 불필요.
    GitHub에 올리면 최대 30초 내 자동 반영(즉시 원하면 URL 끝에 &refresh=1).
@@ -72,7 +85,7 @@ function ghFetchText_(fileName) {
   var res = UrlFetchApp.fetch(apiUrl, { method: 'get', headers: ghHeaders_(), muteHttpExceptions: true });
   if (res.getResponseCode() === 200) {
     var body = JSON.parse(res.getContentText());
-    return Utilities.newBlob(Utilities.base64Decode(String(body.content).replace(/\s/g, ''))).getDataAsString('UTF-8');
+    return Utilities.newBlob(Utilities.base64Decode(stripWs_(body.content))).getDataAsString('UTF-8');
   }
   // 폴백: raw (CDN 지연 가능)
   var r2 = UrlFetchApp.fetch(RAW_BASE + encodeURIComponent(fileName), { muteHttpExceptions: true });
@@ -185,7 +198,7 @@ function upsert_(rows) {
   var byId = {}, byBno = {};
   for (var r = 0; r < data.length; r++) {
     var id = String(data[r][1] || '');
-    var bno = String(data[r][5] || '').replace(/[^0-9]/g, '');
+    var bno = digitsOnly_(data[r][5]);
     if (id) byId[id] = r + 2;
     if (bno && bno.length === 10 && !byBno[bno]) byBno[bno] = r + 2;
   }
@@ -193,7 +206,7 @@ function upsert_(rows) {
   var updated = 0, inserted = 0, now = new Date();
   for (var i = 0; i < rows.length; i++) {
     var v = rows[i];
-    var bno2 = String(v['사업자번호'] || '').replace(/[^0-9]/g, '');
+    var bno2 = digitsOnly_(v['사업자번호']);
     var line = [now, v.id || '', v['업체명'] || '', v['부스'] || '', v['유형'] || '',
                 v['사업자번호'] || '', v['사업자상태'] || '', v['과세유형'] || '',
                 v['대관료만원'] || '', v['일인식대'] || '', v['보증인원'] || '',
@@ -224,7 +237,7 @@ function upsert_(rows) {
 function verify_(bno) {
   var API_KEY = ntsKey_();
   if (!API_KEY) return { ok: false, error: 'NTS_API_KEY 미설정 — 스크립트 속성에 공공데이터포털 인증키 입력 필요' };
-  var b = String(bno || '').replace(/[^0-9]/g, '');
+  var b = digitsOnly_(bno);
   if (b.length !== 10) return { ok: false, error: '사업자번호 10자리 아님' };
 
   var url = NTS_URL + '?serviceKey=' + encodeURIComponent(API_KEY);
@@ -299,7 +312,7 @@ function getStats_() {
     }
 
     var risk = String(r[13] || '');
-    var rc = risk ? risk.split('/').filter(function (s) { return s.replace(/\s/g, ''); }).length : 0;
+    var rc = risk ? risk.split('/').filter(function (s) { return stripWs_(s); }).length : 0;
     stats.risk.total += rc;
     if (rc >= 1) stats.risk.withAny++;
     if (rc >= 3) stats.risk.with3++;
@@ -360,7 +373,7 @@ function validateRows_(rows) {
   for (var i = 0; i < rows.length; i++) {
     var v = rows[i] || {}, errs = [];
     var name = String(v['업체명'] || '').trim();
-    var bno = String(v['사업자번호'] || '').replace(/[^0-9]/g, '');
+    var bno = digitsOnly_(v['사업자번호']);
     if (!name && !bno) errs.push('업체명·사업자번호 모두 없음');
     if (bno && bno.length !== 10) errs.push('사업자번호 10자리 아님');
     if (v['유형'] && ALLOWED_TYPES.indexOf(v['유형']) < 0) errs.push('유형 값 오류: ' + v['유형']);
@@ -399,7 +412,7 @@ function ghGetFile_() {
   var body = JSON.parse(res.getContentText());
   var data = null;
   if (body.content) {
-    var txt = Utilities.newBlob(Utilities.base64Decode(String(body.content).replace(/\s/g, ''))).getDataAsString('UTF-8');
+    var txt = Utilities.newBlob(Utilities.base64Decode(stripWs_(body.content))).getDataAsString('UTF-8');
     try { data = JSON.parse(txt); } catch (e) { data = null; }
   }
   return { sha: body.sha, data: data };
@@ -446,12 +459,12 @@ function publishGithub_(validRows) {
   var byId = {}, byBno = {};
   dataset.venues.forEach(function (x, idx) {
     if (x.id) byId[x.id] = idx;
-    var b = String(x.biz || '').replace(/[^0-9]/g, '');
+    var b = digitsOnly_(x.biz);
     if (b.length === 10) byBno[b] = idx;
   });
   validRows.forEach(function (v) {
     var ven = rowToVenue_(v);
-    var b = String(ven.biz || '').replace(/[^0-9]/g, '');
+    var b = digitsOnly_(ven.biz);
     var idx = (ven.id && byId[ven.id] != null) ? byId[ven.id]
       : ((b.length === 10 && byBno[b] != null) ? byBno[b] : -1);
     if (idx >= 0) { dataset.venues[idx] = ven; }
