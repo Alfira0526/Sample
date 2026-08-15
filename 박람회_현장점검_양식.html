@@ -228,6 +228,10 @@ button:active{transform:translateY(1px)}
 }
 .badge.sync{border-color:var(--ok);color:var(--ok)}
 .badge.wait{border-color:var(--amber);color:var(--amber)}
+.reset-wrap{margin-top:14px;padding-top:13px;border-top:1px dashed var(--rule)}
+#resetAll{width:100%;border:1px solid var(--seal);background:transparent;color:var(--seal);font-weight:800;padding:11px}
+#resetAll:active{background:var(--seal);color:#fff}
+.reset-wrap .phnote{margin-top:7px}
 .vrow{display:flex;gap:7px;align-items:stretch}
 .vrow input{flex:1}
 .vbtn{
@@ -284,6 +288,11 @@ footer{font-size:11px;color:var(--ink-2);padding:22px 0 6px;line-height:1.6;bord
       <button style="flex:1;background:var(--ink);color:#fff;border-color:var(--ink)" id="syncNow">지금 전체 동기화</button>
     </div>
     <div class="vres" id="linkRes" style="display:none"></div>
+    <div class="reset-wrap">
+      <button type="button" id="resetAll">전체 초기화 — 시트·원장 비우기</button>
+      <div class="phnote">모든 업체 기록을 구글 시트·GitHub 원장·이 기기에서 <b>완전 삭제</b>합니다. 되돌릴 수 없습니다. (헤더/설정은 유지)</div>
+      <div class="vres" id="resetRes" style="display:none"></div>
+    </div>
   </div>
 </details>
 
@@ -575,6 +584,8 @@ function call(action,payload){
       else if(action==='verify') run.apiVerify(payload.bno);
       else if(action==='stats')  run.apiStats();
       else if(action==='rows')   run.apiRows();
+      else if(action==='reset')  run.apiReset();
+      else if(action==='delrow') run.apiDeleteRow({id:payload.id,bno:payload.bno});
       else reject(new Error('unknown action'));
     });
   }
@@ -805,13 +816,24 @@ function updateRisk(i){
   const n=FLAGS.filter(([k])=>v.f[k]).length + Object.keys(v.said||{}).filter(k=>v.said[k]).length;
   el.hidden=n===0; el.textContent='위험 '+n; el.className='riskb '+(n>=3?'hi':'');
 }
-function delV(i){
-  const nm=D.v[i].name||'이 업체';
-  if(!confirm('"'+nm+'" 카드를 삭제할까요?\n이 기기 기록에서 제거됩니다. (시트에 이미 저장된 행은 남습니다)')) return;
+async function delV(i){
+  const v=D.v[i], nm=v.name||'이 업체';
+  const remote = v.synced && (isGAS()||D.ep);   // 시트·원장에 이미 올라간 카드인가
+  const msg = remote
+    ? '"'+nm+'" 를 삭제할까요?\n이 기기와 함께 구글 시트·원장(GitHub)에서도 제거됩니다.'
+    : '"'+nm+'" 카드를 삭제할까요?\n이 기기 기록에서 제거됩니다.';
+  if(!confirm(msg)) return;
+  if(remote){
+    status('시트·원장에서 삭제 중…');
+    try{
+      const r=await call('delrow',{id:v.id,bno:(v.biz||'')});
+      if(!(r&&r.ok)) status('원격 삭제 실패 — 카드만 로컬에서 제거함');
+    }catch(e){ status('통신 오류 — 카드만 로컬에서 제거함'); }
+  }
   D.v.splice(i,1);
   if(!D.v.length) D.v=[blank()];
   render(); save();
-  status('카드 삭제됨');
+  status('삭제됨');
 }
 function calc(i){
   const el=document.getElementById('calc'+i); if(!el) return;
@@ -962,6 +984,25 @@ $('#testLink').onclick=async()=>{
 $('#syncNow').onclick=async()=>{
   D.v.forEach((v,i)=>{v.synced=false});
   render();restoreChk();await push();
+};
+/* 전체 초기화 — 시트 데이터행·GitHub 원장·이 기기 기록을 모두 비움(되돌릴 수 없음).
+   오작동 방지를 위해 '초기화' 문자열 입력을 요구. */
+$('#resetAll').onclick=async()=>{
+  const el=$('#resetRes');
+  if(!isGAS() && !D.ep){ el.style.display='block';el.className='vres bad';el.textContent='연동(웹 앱 URL 또는 내장 서버)이 필요합니다.';return; }
+  const typed=prompt('모든 업체 기록을 시트·원장·이 기기에서 완전히 삭제합니다. 되돌릴 수 없습니다.\n계속하려면 초기화 라고 입력하세요.');
+  if(typed===null) return;
+  if(typed.trim()!=='초기화'){ el.style.display='block';el.className='vres bad';el.textContent='입력이 일치하지 않아 취소되었습니다.';return; }
+  el.style.display='block';el.className='vres';el.textContent='초기화 중…';
+  try{
+    const r=await call('reset',{});
+    if(r&&r.ok){
+      D.v=[blank()]; D.chk={}; render(); restoreChk(); persist();
+      const gh=(r.github&&r.github.committed)?' · 원장 비움':(r.github&&r.github.reason?' · 원장: '+r.github.reason:'');
+      el.className='vres ok';el.textContent='초기화 완료 · 시트 '+(r.cleared||0)+'행 삭제'+gh;
+      status('전체 초기화 완료');
+    }else{ el.className='vres bad';el.textContent='초기화 실패 — 응답 오류'; }
+  }catch(e){ el.className='vres bad';el.textContent='초기화 실패 — 통신 오류(재배포·권한 확인)'; }
 };
 window.addEventListener('online',()=>push());
 

@@ -132,6 +132,8 @@ function doPost(e) {
     else if (req.action === 'verify') out = verify_(req.bno);
     else if (req.action === 'stats')  out = getStats_();
     else if (req.action === 'rows')   out = getRows_();
+    else if (req.action === 'reset')  out = reset_();
+    else if (req.action === 'delrow') out = deleteRow_(req.id, req.bno);
     else out = { ok: false, error: 'unknown action' };
   } catch (err) {
     out = { ok: false, error: String(err) };
@@ -148,6 +150,8 @@ function apiSubmit(rows)  { return submit_(rows); }
 function apiVerify(bno)   { return verify_(bno); }
 function apiStats()       { return getStats_(); }
 function apiRows()        { return getRows_(); }
+function apiReset()            { return reset_(); }
+function apiDeleteRow(payload) { payload = payload || {}; return deleteRow_(payload.id, payload.bno); }
 
 /* ── 시트 ───────────────────────────────────────────────── */
 function sheet_() {
@@ -482,4 +486,62 @@ function publishGithub_(validRows) {
   var json = JSON.stringify(dataset, null, 2);
   var put = ghPutFile_(json, cur.sha, 'data: fair-data.json 갱신 (' + dataset.count + '곳, 검증완료)');
   return { committed: true, fileSha: put.fileSha, commitSha: put.commitSha, count: dataset.count };
+}
+
+/* ══ 초기화 / 개별 삭제 ══════════════════════════════════════
+   전체 초기화: 시트 데이터행(헤더 제외) 전부 삭제 + 원장(fair-data.json) 비움.
+   개별 삭제  : id(우선) 또는 사업자번호로 시트 행 1개 삭제 + 원장에서 해당 업체 제거.
+   토큰 미설정 시 시트만 처리하고 원장 커밋은 생략(경고 반환). */
+function reset_() {
+  var sh = sheet_();
+  var last = sh.getLastRow();
+  var cleared = Math.max(0, last - 1);
+  if (last > 1) sh.deleteRows(2, last - 1); // 1행(헤더) 유지, 나머지 전부 삭제
+  var gh;
+  try { gh = ledgerReset_(); } catch (e) { gh = { committed: false, reason: String(e) }; }
+  return { ok: true, cleared: cleared, github: gh };
+}
+function ledgerReset_() {
+  if (!ghToken_()) return { committed: false, reason: 'GITHUB_TOKEN 미설정 — 원장 커밋 생략' };
+  var cur = ghGetFile_();
+  var dataset = { schema: 'wedding-fair/v1', updated: new Date().toISOString(), count: 0, venues: [], budgetFeed: buildBudgetFeed_([]) };
+  var put = ghPutFile_(JSON.stringify(dataset, null, 2), cur.sha, 'data: 원장 초기화(전체 비움)');
+  return { committed: true, commitSha: put.commitSha, count: 0 };
+}
+function deleteRow_(id, bno) {
+  var sh = sheet_();
+  var last = sh.getLastRow();
+  var data = last > 1 ? sh.getRange(2, 1, last - 1, HEADERS.length).getValues() : [];
+  bno = digitsOnly_(bno);
+  var target = 0;
+  for (var r = 0; r < data.length; r++) {
+    var rid = String(data[r][1] || '');
+    var rbno = digitsOnly_(data[r][5]);
+    if ((id && rid === String(id)) || (bno.length === 10 && rbno === bno)) { target = r + 2; break; }
+  }
+  var deleted = 0;
+  if (target) { sh.deleteRow(target); deleted = 1; }
+  var gh;
+  try { gh = ledgerDelete_(id, bno); } catch (e) { gh = { committed: false, reason: String(e) }; }
+  return { ok: true, deleted: deleted, github: gh };
+}
+function ledgerDelete_(id, bno) {
+  if (!ghToken_()) return { committed: false, reason: 'GITHUB_TOKEN 미설정 — 원장 커밋 생략' };
+  var cur = ghGetFile_();
+  if (!cur.data || !cur.data.venues) return { committed: false, reason: '원장 없음' };
+  var dataset = cur.data;
+  bno = digitsOnly_(bno);
+  var before = dataset.venues.length;
+  dataset.venues = dataset.venues.filter(function (x) {
+    var xb = digitsOnly_(x.biz);
+    var matchId = id && String(x.id) === String(id);
+    var matchBno = bno.length === 10 && xb === bno;
+    return !(matchId || matchBno);
+  });
+  if (dataset.venues.length === before) return { committed: false, reason: '원장에 해당 업체 없음' };
+  dataset.updated = new Date().toISOString();
+  dataset.count = dataset.venues.length;
+  dataset.budgetFeed = buildBudgetFeed_(dataset.venues);
+  var put = ghPutFile_(JSON.stringify(dataset, null, 2), cur.sha, 'data: 업체 삭제 (남은 ' + dataset.count + '곳)');
+  return { committed: true, commitSha: put.commitSha, count: dataset.count };
 }
